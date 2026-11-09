@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, Heart, Menu, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import { formatPrice, type Product } from "./catalog";
 import AccountPage from "./Account";
@@ -43,5 +43,5 @@ function App(){
  {toast&&<div className="toast" role="status">{toast}<button onClick={()=>setToast("")}>×</button></div>}
  </div>;
 }
-function Legal({title,updated,children}:{title:string;updated:string;children:React.ReactNode}){return <article className="legal-page section-pad route-section"><p className="eyebrow">THRILOKHA SHILPA · INFORMATION</p><h1 className="route-title">{title}</h1><p className="legal-updated">Last updated {updated}</p>{children}</article>}
+function Legal({title,updated,children}:{title:string;updated:string;children:ReactNode}){return <article className="legal-page section-pad route-section"><p className="eyebrow">THRILOKHA SHILPA · INFORMATION</p><h1 className="route-title">{title}</h1><p className="legal-updated">Last updated {updated}</p>{children}</article>}
 export default App;
