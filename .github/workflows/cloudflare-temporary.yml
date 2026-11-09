@@ -1,4 +1,4 @@
-name: Cloudflare temporary deployment
+name: Cloudflare production deployment
 
 on:
   workflow_dispatch:
@@ -22,9 +22,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - name: Install dependencies
-        run: npm install
-      - name: Type-check and build
-        run: npm run typecheck && npm run build
-      - name: Deploy temporary Cloudflare preview
-        run: npx wrangler deploy --temporary
+        run: npm ci
+      - name: Verify and build
+        run: |
+          npm run typecheck
+          npm run lint
+          npm run test
+          npm run build
+      - name: Deploy to the permanent Cloudflare account
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Add the CLOUDFLARE_API_TOKEN repository secret before deploying."
+            exit 1
+          fi
+          npx wrangler deploy
