@@ -97,11 +97,13 @@ function App() {
   const changeQuantity = (id: string, delta: number) => setCart((current) =>
     current.map((line) => line.productId === id ? { ...line, quantity: line.quantity + delta } : line)
       .filter((line) => line.quantity > 0));
-  const toggleWish = (id: string) => setWishlist((current) => {
-    const exists = current.includes(id);
+  const toggleWish = (id: string) => {
+    const exists = wishlist.includes(id);
+    setWishlist((current) => exists
+      ? current.filter((item) => item !== id)
+      : [...current, id]);
     setToast(exists ? "Removed from your saved pieces" : "Saved for another day");
-    return exists ? current.filter((item) => item !== id) : [...current, id];
-  });
+  };
   const chooseCategory = (next: Category) => {
     setCategory(next);
     setPanel(null);
