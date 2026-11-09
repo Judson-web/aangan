@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowRight, ArrowUpRight, Check, LogOut, Pencil, ShieldCheck, TicketPercent, UserRound } from "lucide-react";
 
-type User = { id: string; email: string; display_name: string; role: "customer" | "admin" };
+type User = { id: string; email: string; display_name: string; role: "customer" | "admin" | "super_admin" };
 type Product = { id:string; name:string; description:string; category:string; price:number; compare_at_price:number|null; image_url:string; stock:number; active:number };
+type AdminAccount = {email:string;role:"admin"|"super_admin";created_at:string;added_by_email:string|null};
 type Coupon = { id:string; code:string; discount_type:"percent"|"fixed"; discount_value:number; min_order_value:number; max_uses:number|null; used_count:number; expires_at:string|null; active:number };
 type Stats = { products:number; customers:number; orders:number; revenue:number; paymentsEnabled:boolean; activeCoupons:number; recentActivity:Array<{action:string;entity_type:string;created_at:string}> };
 type Props = { mode: string };
@@ -26,7 +27,7 @@ export default function AccountPage({ mode }: Props) {
   const [busy,setBusy]=useState(false);
   const [stats,setStats]=useState<Stats|null>(null);
   const [products,setProducts]=useState<Product[]>([]);
-  const [coupons,setCoupons]=useState<Coupon[]>([]);
+  const [coupons,setCoupons]=useState<Coupon[]>([]);\n  const [admins,setAdmins]=useState<AdminAccount[]>([]);\n  const [newAdminEmail,setNewAdminEmail]=useState("");
   const [product,setProduct]=useState(blankProduct);
   const [editingId,setEditingId]=useState<string|null>(null);
   const [coupon,setCoupon]=useState(blankCoupon);
@@ -40,6 +41,7 @@ export default function AccountPage({ mode }: Props) {
       request<{coupons:Coupon[]}>("/api/admin/coupons")
     ]);
     setStats(s);setProducts(p.products??[]);setCoupons(c.coupons??[]);
+    if(user?.role==="super_admin"){const adminData=await request<{admins:AdminAccount[]}>("/api/admin/admins");setAdmins(adminData.admins??[]);}
   },[]);
   useEffect(()=>{request<{user:User|null}>("/api/auth/me").then(d=>{setUser(d.user);setDisplayName(d.user?.display_name??"");}).catch(()=>setUser(null));},[]);
   useEffect(()=>{
@@ -129,13 +131,13 @@ export default function AccountPage({ mode }: Props) {
     </div>}
     {mode==="profile"&&(user?<div className="account-panel profile-panel">
       <div className="profile-avatar"><UserRound/></div><h2>{user.display_name||"Welcome back"}</h2><p>{user.email}</p>
-      <span className="account-role">{user.role==="admin"?"Administrator":"Customer account"}</span>
+      <span className="account-role">{user.role==="super_admin"?"Super administrator":user.role==="admin"?"Administrator":"Customer account"}</span>
       <form className="profile-edit-form" onSubmit={saveProfile}><label>Your display name<input value={displayName||user.display_name} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="Your name"/></label><button className="checkout-button" disabled={busy}>Save profile <Check size={16}/></button></form>
-      <div className="account-links"><a href="/bag">Shopping bag <ArrowRight size={16}/></a><a href="/wishlist">Saved pieces <ArrowRight size={16}/></a>{user.role==="admin"&&<a href="/admin">Store administration <ArrowUpRight size={16}/></a>}</div>
+      <div className="account-links"><a href="/bag">Shopping bag <ArrowRight size={16}/></a><a href="/wishlist">Saved pieces <ArrowRight size={16}/></a>{(user.role==="admin"||user.role==="super_admin")&&<a href="/admin">Store administration <ArrowUpRight size={16}/></a>}</div>
       <button className="back-link" onClick={signOut}><LogOut size={15}/> Sign out</button>
       {notice&&<p className="admin-notice" role="status">{notice}</p>}
     </div>:<div className="account-panel"><h2>Welcome to your account</h2><p>Sign in to keep your bag and saved pieces with you across devices.</p><a className="checkout-button" href="/login">Sign in or create account <ArrowRight size={16}/></a></div>)}
-    {mode==="admin"&&(user?.role==="admin"?<>
+    {mode==="admin"&&((user?.role==="admin"||user?.role==="super_admin")?<>
       <div className="admin-stats">{[
         ["Live products",stats?.products??"…"],["Customer accounts",stats?.customers??"…"],["Orders",stats?.paymentsEnabled?stats.orders:"Not live"],["Active coupons",stats?.activeCoupons??"…"]
       ].map(([label,value])=><article key={String(label)}><small>{String(label)}</small><strong>{String(value)}</strong></article>)}</div>
@@ -164,6 +166,14 @@ export default function AccountPage({ mode }: Props) {
           <button className="checkout-button">Publish coupon <ArrowUpRight size={16}/></button>
         </form>
       </div>
+      {user?.role==="super_admin"&&<section className="admin-list-section admin-access-section"><div className="admin-list-heading"><div><p className="eyebrow">ACCESS CONTROL</p><h2>Administrators <em>({admins.length})</em></h2></div></div>
+        <p className="admin-access-copy">You are the super administrator. Add trusted people by email. They receive administrator access after signing in with that exact address. Only you can add or remove administrators.</p>
+        <form className="admin-add-form" onSubmit={async e=>{e.preventDefault();try{await request("/api/admin/admins",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:newAdminEmail})});setNewAdminEmail("");setNotice("Administrator access granted to "+newAdminEmail+".");await loadAdmin();}catch(x){setNotice(x instanceof Error?x.message:"Could not add administrator.");}}}>
+          <label>Administrator email<input type="email" required value={newAdminEmail} onChange={e=>setNewAdminEmail(e.target.value)} placeholder="colleague@example.com"/></label>
+          <button className="checkout-button">Add administrator <ArrowUpRight size={16}/></button>
+        </form>
+        <div className="admin-people-list">{admins.map(item=><article key={item.email}><div><strong>{item.email}</strong><small>{item.role==="super_admin"?"Super administrator":"Administrator"} · Added {new Date(item.created_at).toLocaleDateString("en-IN")}</small></div>{item.role==="admin"&&<button type="button" className="coupon-toggle" onClick={async()=>{if(!window.confirm("Remove administrator access for "+item.email+"?"))return;try{await request("/api/admin/admins/"+encodeURIComponent(item.email),{method:"DELETE"});setNotice("Administrator access removed.");await loadAdmin();}catch(x){setNotice(x instanceof Error?x.message:"Could not remove administrator.");}}}>Remove access</button>}</article>)}</div>
+      </section>}
       <section className="admin-list-section"><div className="admin-list-heading"><div><p className="eyebrow">LIVE CATALOGUE</p><h2>Products <em>({products.length})</em></h2></div><button className="text-link" onClick={()=>void loadAdmin()}>Refresh <ArrowRight size={15}/></button></div>
         {products.length===0?<p className="admin-empty">Your catalogue is empty. Add the first real product above.</p>:<div className="admin-product-list">{products.map(item=><article key={item.id}><img src={item.image_url||"/favicon.svg"} alt=""/><div><strong>{item.name}</strong><small>{item.category} · ₹{item.price.toLocaleString("en-IN")} · Stock {item.stock} · {item.active?"Published":"Hidden"}</small></div><button className="icon-button" onClick={()=>editProduct(item)} aria-label={"Edit "+item.name}><Pencil size={16}/></button></article>)}</div>}
       </section>
