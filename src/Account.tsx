@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { apiFetch, requestEmailLink, signOut as supabaseSignOut } from "./supabase";
 import { ArrowRight, ArrowUpRight, Check, LogOut, Pencil, ShieldCheck, TicketPercent, UserRound } from "lucide-react";
 
-type User = { id: string; email: string; display_name: string; role: "customer" | "admin" | "super_admin" };
+type User = { id: string; email: string; display_name: string; avatar_url?: string; role: "customer" | "admin" | "super_admin" };
 type Product = { id:string; name:string; description:string; category:string; price:number; compare_at_price:number|null; image_url:string; stock:number; active:number };
 type AdminAccount = {email:string;role:"admin"|"super_admin";created_at:string;added_by_email:string|null};
 type Coupon = { id:string; code:string; discount_type:"percent"|"fixed"; discount_value:number; min_order_value:number; max_uses:number|null; used_count:number; expires_at:string|null; active:number };
 type Stats = { products:number; customers:number; orders:number; revenue:number; paymentsEnabled:boolean; activeCoupons:number; recentActivity:Array<{action:string;entity_type:string;created_at:string}> };
-type Props = { mode: string };
+type StoreSection = {id:string;title:string;subtitle:string;kind:"featured"|"category"|"manual";category:string;product_ids:string[];position:number;visible:number};\ntype Props = { mode: string };
 const blankProduct = () => ({name:"",description:"",category:"General",price:"",compareAtPrice:"",imageUrl:"",stock:"0",active:true});
 const blankCoupon = () => ({code:"",discountType:"percent",discountValue:"10",minimumOrder:"0",maxUses:"",expiresAt:""});
 
@@ -34,10 +34,10 @@ export default function AccountPage({ mode }: Props) {
   const [editingId,setEditingId]=useState<string|null>(null);
   const [coupon,setCoupon]=useState(blankCoupon);
   const [notice,setNotice]=useState("");
-  const [uploading,setUploading]=useState(false);
+  const [uploading,setUploading]=useState(false);\n  const [sections,setSections]=useState<StoreSection[]>([]);\n  const [section,setSection]=useState({title:"",subtitle:"",kind:"featured" as StoreSection["kind"],category:"",position:"0",visible:true});\n  const [editingSection,setEditingSection]=useState<string|null>(null);
 
   const loadAdmin=useCallback(async()=>{
-    const [s,p,c]=await Promise.all([
+    const [s,p,c,sectionData]=await Promise.all([
       request<Stats>("/api/admin/stats"),
       request<{products:Product[]}>("/api/admin/products"),
       request<{coupons:Coupon[]}>("/api/admin/coupons")
@@ -71,7 +71,7 @@ export default function AccountPage({ mode }: Props) {
     catch(x){setNotice(x instanceof Error?x.message:"Could not update your profile.");}
     finally{setBusy(false);}
   }
-  async function uploadImage(file?:File){
+  async function uploadProfileImage(file?:File){\n    if(!file)return;setUploading(true);setNotice("");\n    try{const form=new FormData();form.append("file",file);const result=await request<{avatar_url:string}>("/api/profile/avatar",{method:"POST",body:form});setUser(u=>u?{...u,avatar_url:result.avatar_url}:u);setNotice("Profile photo updated.");}\n    catch(x){setNotice(x instanceof Error?x.message:"Profile photo upload failed.");}finally{setUploading(false);}\n  }\n  async function uploadImage(file?:File){
     if(!file)return;
     setUploading(true);setNotice("");
     try{
@@ -101,7 +101,7 @@ export default function AccountPage({ mode }: Props) {
       setNotice("Coupon published and ready to use.");setCoupon(blankCoupon());await loadAdmin();
     }catch(x){setNotice(x instanceof Error?x.message:"Could not publish coupon.");}
   }
-  function editProduct(item:Product){
+  async function saveSection(e:FormEvent){e.preventDefault();setNotice("");try{await request("/api/admin/sections",{method:editingSection?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...section,id:editingSection,position:Number(section.position)})});setSection({title:"",subtitle:"",kind:"featured",category:"",position:String(sections.length),visible:true});setEditingSection(null);setNotice("Homepage section saved.");await loadAdmin();}catch(x){setNotice(x instanceof Error?x.message:"Could not save section.");}}\n  function editSection(item:StoreSection){setEditingSection(item.id);setSection({title:item.title,subtitle:item.subtitle,kind:item.kind,category:item.category,position:String(item.position),visible:Boolean(item.visible)});}\n  function editProduct(item:Product){
     setEditingId(item.id);setProduct({name:item.name,description:item.description,category:item.category,price:String(item.price),compareAtPrice:item.compare_at_price===null?"":String(item.compare_at_price),imageUrl:item.image_url,stock:String(item.stock),active:Boolean(item.active)});
     document.querySelector(".admin-form")?.scrollIntoView({behavior:"smooth",block:"start"});
   }
@@ -124,9 +124,9 @@ export default function AccountPage({ mode }: Props) {
       {error&&<p className="verification-error" role="alert">{error}</p>}
     </div>}
     {mode==="profile"&&(user?<div className="account-panel profile-panel">
-      <div className="profile-avatar"><UserRound/></div><h2>{user.display_name||"Welcome back"}</h2><p>{user.email}</p>
+      <div className="profile-avatar">{user.avatar_url?<img src={user.avatar_url} alt="Profile"/>:<UserRound/>}</div><h2>{user.display_name||"Welcome back"}</h2><p>{user.email}</p>
       <span className="account-role">{user.role==="super_admin"?"Super administrator":user.role==="admin"?"Administrator":"Customer account"}</span>
-      <form className="profile-edit-form" onSubmit={saveProfile}><label>Your display name<input value={displayName||user.display_name} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="Your name"/></label><button className="checkout-button" disabled={busy}>Save profile <Check size={16}/></button></form>
+      <form className="profile-edit-form" onSubmit={saveProfile}><label>Profile photograph<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>void uploadProfileImage(e.target.files?.[0])}/></label><label>Your display name<input value={displayName||user.display_name} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="Your name"/></label><button className="checkout-button" disabled={busy}>Save profile <Check size={16}/></button></form>
       <div className="account-links"><a href="/bag">Shopping bag <ArrowRight size={16}/></a><a href="/wishlist">Saved pieces <ArrowRight size={16}/></a>{(user.role==="admin"||user.role==="super_admin")&&<a href="/admin">Store administration <ArrowUpRight size={16}/></a>}</div>
       <button className="back-link" onClick={signOut}><LogOut size={15}/> Sign out</button>
       {notice&&<p className="admin-notice" role="status">{notice}</p>}
@@ -136,7 +136,7 @@ export default function AccountPage({ mode }: Props) {
         ["Live products",stats?.products??"…"],["Customer accounts",stats?.customers??"…"],["Orders",stats?.paymentsEnabled?stats.orders:"Not live"],["Active coupons",stats?.activeCoupons??"…"]
       ].map(([label,value])=><article key={String(label)}><small>{String(label)}</small><strong>{String(value)}</strong></article>)}</div>
       <div className="admin-live-note"><span className="live-dot"/> Statistics refresh every 30 seconds. Orders and revenue remain disabled until payment integration is enabled.</div>
-      <div className="admin-forms">
+      <section className="admin-list-section"><div className="admin-list-heading"><div><p className="eyebrow">HOMEPAGE EDITOR</p><h2>Catalogue <em>sections ({sections.length})</em></h2></div></div><p className="admin-access-copy">Create, reorder, hide or edit the lists shown on the homepage. Sections draw only from products you have actually published.</p><form className="admin-form" onSubmit={saveSection}><h2>{editingSection?"Edit section":"Add homepage section"}</h2><label>Section title<input required maxLength={100} value={section.title} onChange={e=>setSection({...section,title:e.target.value})}/></label><label>Subtitle<input maxLength={240} value={section.subtitle} onChange={e=>setSection({...section,subtitle:e.target.value})}/></label><div className="form-two"><label>Section type<select value={section.kind} onChange={e=>setSection({...section,kind:e.target.value as StoreSection["kind"]})}><option value="featured">All published products</option><option value="category">Category list</option><option value="manual">Manual selection (reserved)</option></select></label><label>Category<input value={section.category} onChange={e=>setSection({...section,category:e.target.value})} placeholder="Home, Wear, Art…"/></label></div><div className="form-two"><label>Display order<input type="number" min="0" value={section.position} onChange={e=>setSection({...section,position:e.target.value})}/></label><label className="admin-checkbox"><input type="checkbox" checked={section.visible} onChange={e=>setSection({...section,visible:e.target.checked})}/> Visible on homepage</label></div><button className="checkout-button">{editingSection?"Save section":"Create section"} <ArrowUpRight size={16}/></button>{editingSection&&<button type="button" className="back-link" onClick={()=>{setEditingSection(null);setSection({title:"",subtitle:"",kind:"featured",category:"",position:String(sections.length),visible:true})}}>Cancel editing</button>}</form><div className="admin-product-list">{sections.map(item=><article key={item.id}><div><strong>{item.title}</strong><small>{item.kind} · Order {item.position} · {item.visible?"Visible":"Hidden"}</small></div><button className="icon-button" onClick={()=>editSection(item)} aria-label={"Edit "+item.title}><Pencil size={16}/></button><button className="coupon-toggle" onClick={async()=>{await request("/api/admin/sections/"+encodeURIComponent(item.id),{method:"DELETE"});await loadAdmin();}}>Delete</button></article>)}</div></section>\n      <div className="admin-forms">
         <form className="admin-form" onSubmit={saveProduct}>
           <p className="eyebrow">CATALOGUE MANAGEMENT</p><h2>{editingId?"Edit product":"Add a product"}</h2>
           <label>Product name<input required value={product.name} onChange={e=>setProduct({...product,name:e.target.value})}/></label>
