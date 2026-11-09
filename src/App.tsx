@@ -111,7 +111,7 @@ function ProductCard({ product, wished, onWish, onOpen, onAdd }: {
       <button className={`wish-button ${wished ? "is-wished" : ""}`} onClick={() => onWish(product.id)} aria-label={wished ? "Remove from wishlist" : "Add to wishlist"} aria-pressed={wished}>
         <Heart size={17} fill={wished ? "currentColor" : "none"} />
       </button>
-      <button className="quick-add" onClick={() => onAdd(product)}><Plus size={15} /> Add to bag</button>
+      <button className="quick-add" onClick={() => onAdd(product)}><Plus size={15} /> Add to Cart</button>
     </div>
     <div className="product-meta"><span>{product.maker}</span><span>{product.category}</span></div>
     <button className="product-name" onClick={() => onOpen(product)}>{product.name}</button>
@@ -127,6 +127,8 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [cart, setCart] = useState<CartLine[]>(() => readStored(CART_KEY, []));
+  const [cloudUser, setCloudUser] = useState(false);
+  const [cloudReady, setCloudReady] = useState(false);
   const [wishlist, setWishlist] = useState<string[]>(() => readStored(WISHLIST_KEY, []));
   const [toast, setToast] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("featured");
@@ -153,6 +155,39 @@ function App() {
   }, []);
   useEffect(() => { saveStored(CART_KEY, cart); }, [cart]);
   useEffect(() => { saveStored(WISHLIST_KEY, wishlist); }, [wishlist]);
+  useEffect(() => {
+    let alive = true;
+    const hydrate = async () => {
+      try {
+        const me = await fetch("/api/auth/me", { credentials: "same-origin" }).then(r => r.json()) as { user?: unknown };
+        if (!alive) return;
+        if (me.user) {
+          const [remoteCart, remoteWishlist] = await Promise.all([
+            fetch("/api/cart", { credentials: "same-origin" }).then(r => r.json()) as Promise<{items?:CartLine[]}>,
+            fetch("/api/wishlist", { credentials: "same-origin" }).then(r => r.json()) as Promise<{items?:Array<{productId:string}>}>,
+          ]);
+          if (!alive) return;
+          const localCart = readStored<CartLine[]>(CART_KEY, []);
+          const merged = new Map<string, number>();
+          for (const line of [...(remoteCart.items ?? []), ...localCart]) merged.set(line.productId, Math.max(merged.get(line.productId) ?? 0, line.quantity));
+          setCart([...merged].map(([productId, quantity]) => ({ productId, quantity })));
+          setWishlist([...new Set([...(remoteWishlist.items ?? []).map(x => x.productId), ...readStored<string[]>(WISHLIST_KEY, [])])]);
+          setCloudUser(true);
+        } else setCloudUser(false);
+      } catch { if (alive) setCloudUser(false); }
+      finally { if (alive) setCloudReady(true); }
+    };
+    void hydrate();
+    return () => { alive = false; };
+  }, []);
+  useEffect(() => {
+    if (!cloudUser || !cloudReady) return;
+    void fetch("/api/cart", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: cart }) });
+  }, [cart, cloudUser, cloudReady]);
+  useEffect(() => {
+    if (!cloudUser || !cloudReady) return;
+    void fetch("/api/wishlist", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: wishlist }) });
+  }, [wishlist, cloudUser, cloudReady]);
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(""), 2600);
