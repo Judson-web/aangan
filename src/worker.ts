@@ -137,6 +137,8 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       return json({coupons:result.results});
     }
     if(url.pathname==="/api/admin/media" && method==="POST"){
+      const contentLength=Number(request.headers.get("Content-Length")??0);
+      if(contentLength>1200000) return json({error:"Image uploads are limited to 1 MB."},413);
       let form:FormData; try { form=await request.formData(); } catch { return json({error:"Upload a valid image file."},400); }
       const file=form.get("file");
       if(!(file instanceof File)) return json({error:"Choose an image to upload."},400);
