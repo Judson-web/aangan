@@ -111,7 +111,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
     if(url.pathname==="/api/admin/admins" && method==="POST"){
       if(user.role!=="super_admin") return json({error:"Only the super administrator can add administrators."},403);
       const d=await body(); const email=typeof d.email==="string"?d.email.trim().toLowerCase():"";
-      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254) return json({error:"Enter a valid administrator email address."},400);
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254) return json({error:"Enter a valid administrator email address."},400);
       const existing=await env.DB.prepare("SELECT role FROM store_admins WHERE email=?").bind(email).first<{role:string}>();
       if(existing?.role==="super_admin") return json({error:"This account is already a super administrator."},409);
       await env.DB.prepare("INSERT INTO store_admins(email,role,added_by_email) VALUES(?,'admin',?) ON CONFLICT(email) DO UPDATE SET role='admin',added_by_email=excluded.added_by_email WHERE store_admins.role!='super_admin'").bind(email,user.email).run();
