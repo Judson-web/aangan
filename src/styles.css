@@ -94,3 +94,40 @@
   .saved-filter-note button{border:0;background:none;text-decoration:underline;color:var(--ink);font-size:10px}
 }
 @media(hover:none){.quick-add{transform:none}}
+
+
+/* Modern commerce refinements */
+.collection-controls{display:flex;align-items:center;gap:22px}
+.collection-controls>span{font-size:10px;color:var(--muted);white-space:nowrap}
+.sort-control{display:flex;align-items:center;gap:9px;font-size:10px;color:var(--muted);white-space:nowrap}
+.sort-control select{appearance:none;border:1px solid var(--line);border-radius:2px;background:transparent;color:var(--ink);padding:10px 30px 10px 12px;font:inherit;font-size:10px;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,#656657 50%),linear-gradient(135deg,#656657 50%,transparent 50%);background-position:calc(100% - 13px) 14px,calc(100% - 9px) 14px;background-size:4px 4px,4px 4px;background-repeat:no-repeat}
+.collection-toolbar{gap:18px}
+.product-image-wrap{background:#eeeae0}
+.product-image-wrap img{transition:transform .55s cubic-bezier(.2,.7,.2,1),filter .35s ease}
+.product-card:hover .product-image-wrap img{transform:scale(1.045)}
+.product-card:hover .quick-add{opacity:1;transform:translateY(0)}
+.product-badge{backdrop-filter:blur(10px);box-shadow:0 2px 10px #292b2410}
+.wish-button{backdrop-filter:blur(12px);box-shadow:0 2px 12px #292b2410}
+.image-button{overflow:hidden}
+.product-name{text-align:left;transition:color .2s ease}
+.product-name:hover{color:var(--olive)}
+.shipping-progress{padding:0 0 18px;margin-bottom:17px;border-bottom:1px solid var(--line)}
+.shipping-progress-copy{font-size:10px;margin-bottom:10px}
+.shipping-progress-copy strong{font-weight:600}
+.shipping-progress-copy span{color:var(--muted)}
+.shipping-progress-track{height:4px;background:#e6e1d6;overflow:hidden;border-radius:10px}
+.shipping-progress-track span{display:block;height:100%;background:var(--olive);border-radius:10px;transition:width .25s ease}
+@media(min-width:721px){
+  .collection-toolbar{padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:24px}
+  .filter-list button{padding:9px 0;position:relative}
+  .filter-list button.active:after{content:"";position:absolute;left:0;right:0;bottom:1px;height:1px;background:var(--olive)}
+  .sort-control select{min-width:148px}
+}
+@media(max-width:720px){
+  .collection-toolbar{align-items:center;gap:10px}
+  .collection-controls{gap:0}
+  .collection-controls>span,.sort-control>span{display:none}
+  .sort-control select{padding:8px 27px 8px 9px;font-size:9px;background-position:calc(100% - 12px) 12px,calc(100% - 8px) 12px}
+  .product-card:hover .product-image-wrap img{transform:none}
+  .shipping-progress{padding-bottom:14px;margin-bottom:14px}
+}
