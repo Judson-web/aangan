@@ -265,7 +265,7 @@ export default function AccountPage({ mode }: Props) {
             <p className="auth-sent-address">{email}</p>
             <form className="auth-form code-verify-form" onSubmit={verifyCode}>
               <label htmlFor="email-login-code">Eight-digit email code</label>
-              <input id="email-login-code" className="auth-code-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{8}" maxLength={8} required value={emailCode} onChange={e=>setEmailCode(e.target.value.replace(/\D/g,"").slice(0,8))} placeholder="000000"/>
+              <input id="email-login-code" className="auth-code-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{8}" maxLength={8} required value={emailCode} onChange={e=>setEmailCode(e.target.value.replace(/\D/g,"").slice(0,8))} placeholder="00000000"/>
               <button className="checkout-button auth-submit" disabled={busy}>{busy?"Verifying…":"Verify and sign in"} <ArrowRight size={16}/></button>
             </form>
             <button type="button" className="auth-text-button auth-resend" onClick={()=>void resendCode()} disabled={busy}>Resend code</button>
