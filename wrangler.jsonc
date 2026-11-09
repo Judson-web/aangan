@@ -17,5 +17,12 @@
     "enabled": true
   },
   "account_id": "b45bd4f50a1e0280366712348fe2055a",
-  "previews": {}
+  "previews": {},
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "thrilokha-commerce",
+      "database_id": "f696ffeb-cee1-43ba-9160-0de3e8666163"
+    }
+  ]
 }
