@@ -22,10 +22,10 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
   return fetch(input, { ...init, headers, credentials: "same-origin" });
 }
 
-export async function requestEmailLink(email: string) {
+export async function requestEmailLink(email: string, displayName = "") {
   return supabase.auth.signInWithOtp({
     email: email.trim().toLowerCase(),
-    options: { emailRedirectTo: `${window.location.origin}/profile`, shouldCreateUser: true },
+    options: { emailRedirectTo: `${window.location.origin}/profile`, shouldCreateUser: true, data: displayName.trim() ? { full_name: displayName.trim().slice(0, 80) } : undefined },
   });
 }
 
