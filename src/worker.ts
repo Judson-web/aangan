@@ -74,7 +74,7 @@ async function currentUser(request: Request, env: Env) {
     const email = identity.email.trim().toLowerCase();
     const displayName = (identity.user_metadata?.full_name ?? identity.user_metadata?.name ?? "").slice(0, 80);
     await env.DB.prepare("INSERT INTO profiles(id,email,display_name) VALUES(?,?,?) ON CONFLICT(email) DO NOTHING").bind(identity.id,email,displayName).run();
-    const row = await env.DB.prepare("SELECT p.id,p.email,p.display_name,COALESCE(a.role,'customer') AS role FROM profiles p LEFT JOIN store_admins a ON lower(a.email)=lower(p.email) WHERE lower(p.email)=lower(?)").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
+    const row = await env.DB.prepare("SELECT p.id,p.email,p.display_name,p.avatar_url,COALESCE(a.role,'customer') AS role FROM profiles p LEFT JOIN store_admins a ON lower(a.email)=lower(p.email) WHERE lower(p.email)=lower(?)").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
     return row ?? null;
   } catch { return null; }
 }
@@ -87,11 +87,25 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
   const user = await currentUser(request,env);
   const body = async () => await request.json() as Record<string, unknown>;
   if (url.pathname === "/api/auth/me" && method === "GET") return json({user});
+  if(url.pathname==="/api/profile/avatar" && method==="POST"){
+    if(!user) return json({error:"Sign in to update your profile photo."},401);
+    let form:FormData; try{form=await request.formData();}catch{return json({error:"Upload a valid image."},400);}
+    const file=form.get("file"); if(!(file instanceof File)) return json({error:"Choose an image."},400);
+    if(!new Set(["image/jpeg","image/png","image/webp","image/avif"]).has(file.type)) return json({error:"Use JPG, PNG, WebP or AVIF."},415);
+    if(file.size<1||file.size>1048576) return json({error:"Profile photos must be 1 MB or smaller."},413);
+    const id=crypto.randomUUID(); await env.DB.prepare("INSERT INTO product_media(id,mime_type,data,byte_size) VALUES(?,?,?,?)").bind(id,file.type,new Uint8Array(await file.arrayBuffer()),file.size).run();
+    await env.DB.prepare("UPDATE profiles SET avatar_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind("/media/"+id,user.id).run();
+    return json({avatar_url:"/media/"+id});
+  }
   if(url.pathname==="/api/profile" && method==="PUT"){
     if(!user) return json({error:"Sign in to update your profile."},401);
     const d=await body(); const displayName=typeof d.displayName==="string"?d.displayName.trim().slice(0,80):"";
     await env.DB.prepare("UPDATE profiles SET display_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(displayName,user.id).run();
     return json({user:{...user,display_name:displayName}});
+  }
+  if (url.pathname === "/api/storefront" && method === "GET") {
+    const result=await env.DB.prepare("SELECT id,title,subtitle,kind,category,product_ids,position,visible FROM store_sections WHERE visible=1 ORDER BY position ASC,created_at ASC").all();
+    return json({sections:result.results.map((x)=>({...x,product_ids:JSON.parse(String(x.product_ids||"[]"))}))});
   }
   if (url.pathname === "/api/products" && method === "GET") {
     const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,stock FROM products WHERE active=1 ORDER BY created_at DESC").all();
@@ -124,6 +138,21 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       await env.DB.prepare("DELETE FROM store_admins WHERE email=? AND role='admin'").bind(email).run();
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"removed","administrator",email).run();
       return json({ok:true});
+    }
+    if(url.pathname==="/api/admin/sections" && method==="GET"){
+      const result=await env.DB.prepare("SELECT id,title,subtitle,kind,category,product_ids,position,visible FROM store_sections ORDER BY position ASC,created_at ASC").all();
+      return json({sections:result.results.map((x)=>({...x,product_ids:JSON.parse(String(x.product_ids||"[]"))}))});
+    }
+    if(url.pathname==="/api/admin/sections" && (method==="POST"||method==="PUT")){
+      const d=await body(); const id=typeof d.id==="string"&&d.id?d.id:crypto.randomUUID(); const title=String(d.title??"").trim().slice(0,100); const kind=["featured","category","manual"].includes(String(d.kind))?String(d.kind):"featured";
+      if(!title) return json({error:"A section title is required."},400);
+      const category=String(d.category??"").slice(0,60); const ids=Array.isArray(d.product_ids)?JSON.stringify(d.product_ids.filter(x=>typeof x==="string").slice(0,100)): "[]";
+      await env.DB.prepare("INSERT INTO store_sections(id,title,subtitle,kind,category,product_ids,position,visible) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,subtitle=excluded.subtitle,kind=excluded.kind,category=excluded.category,product_ids=excluded.product_ids,position=excluded.position,visible=excluded.visible,updated_at=CURRENT_TIMESTAMP").bind(id,title,String(d.subtitle??"").slice(0,240),kind,category,ids,Math.max(0,Math.min(1000,Number(d.position??0))),d.visible===false?0:1).run();
+      await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,method==="POST"?"created":"updated","store_section",id).run();
+      return json({id},method==="POST"?201:200);
+    }
+    if(url.pathname.startsWith("/api/admin/sections/") && method==="DELETE"){
+      const id=decodeURIComponent(url.pathname.slice("/api/admin/sections/".length)); await env.DB.prepare("DELETE FROM store_sections WHERE id=?").bind(id).run(); return json({ok:true});
     }
     if(url.pathname==="/api/admin/products" && method==="GET"){
       const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,stock,active,created_at,updated_at FROM products ORDER BY created_at DESC").all();
@@ -163,6 +192,9 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       await env.DB.prepare("INSERT INTO products(id,slug,name,description,category,price,compare_at_price,image_url,stock) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,slug,name,String(d.description??""),String(d.category??"General"),price,d.compareAtPrice!==null&&d.compareAtPrice!==undefined&&d.compareAtPrice!==""&&Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,String(d.imageUrl??""),Math.max(0,Math.min(100000,Number(d.stock??0)))).run();
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"created","product",id).run();
       return json({id},201);
+    }
+    if(url.pathname.startsWith("/api/admin/products/") && method==="DELETE"){
+      const id=decodeURIComponent(url.pathname.split("/").pop()??""); await env.DB.prepare("UPDATE products SET active=0,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run(); return json({ok:true});
     }
     if(url.pathname.startsWith("/api/admin/products/") && method==="PUT"){
       const id=decodeURIComponent(url.pathname.split("/").pop()??""); const d=await body(); const price=Number(d.price);
