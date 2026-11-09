@@ -338,3 +338,47 @@
 .form-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .admin-notice{padding:15px;background:#e7e8dc;color:#4c563b;font-size:11px}
 @media(max-width:720px){.admin-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-forms{grid-template-columns:1fr}.account-page{padding-top:55px;padding-bottom:80px}.account-page .route-title{font-size:43px}.form-two{grid-template-columns:1fr 1fr}}
+
+.brand-monogram{width:34px;height:34px;object-fit:contain;flex:none}
+.drawer{overflow-y:auto;overscroll-behavior:contain;box-shadow:-24px 0 80px #17191222}
+.drawer-head{position:sticky;top:-26px;background:var(--paper);z-index:2;padding:5px 0 22px}
+.drawer-nav{padding-top:22px;gap:0}
+.drawer-nav button,.drawer-nav a{font-size:clamp(22px,3vw,27px);padding:16px 0;transition:color .2s,padding .2s}
+.drawer-nav button:hover,.drawer-nav a:hover{color:var(--olive);padding-left:7px}
+.drawer-note{margin-top:auto;padding:30px 0 8px;border-top:1px solid var(--line);display:grid;gap:8px}
+.drawer-note strong{font:500 23px var(--serif)}
+.drawer-note p{font-size:10px;line-height:1.8;color:var(--muted);margin:0}
+.drawer-quick-links{display:flex;gap:20px;margin-top:12px}
+.drawer-quick-links a{font-size:10px;text-decoration:underline;text-underline-offset:4px}
+.admin-live-note{display:flex;align-items:center;gap:9px;margin:-16px 0 26px;font-size:10px;color:var(--muted)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#77834e;box-shadow:0 0 0 4px #77834e1c}
+.admin-list-section{margin:34px 0;padding:25px;background:#fbf9f3;border:1px solid var(--line)}
+.admin-list-heading{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:17px}
+.admin-list-heading .eyebrow{margin-bottom:9px}
+.admin-list-heading h2,.admin-list-section h2{font:500 27px var(--serif);margin:0}
+.admin-list-heading h2 em{color:var(--olive);font-style:normal}
+.admin-product-list,.coupon-list{display:grid}
+.admin-product-list article,.coupon-list article{display:grid;grid-template-columns:58px 1fr auto;align-items:center;gap:15px;padding:12px 0;border-top:1px solid var(--line)}
+.admin-product-list img{width:58px;height:66px;object-fit:cover;background:var(--cream)}
+.admin-product-list article>div,.coupon-list article>div{display:grid;gap:5px}
+.admin-product-list strong,.coupon-list strong{font:500 16px var(--serif)}
+.admin-product-list small,.coupon-list small{font-size:9px;color:var(--muted);line-height:1.6}
+.coupon-list article{grid-template-columns:28px 1fr auto}
+.coupon-list article>svg{color:var(--olive)}
+.coupon-list article>span{font-size:9px;color:var(--olive);background:#e8eadf;padding:6px 9px}
+.admin-empty{font-size:11px;color:var(--muted);padding:14px 0}
+.upload-preview{display:flex;align-items:center;gap:12px;padding:10px;background:#efede4}
+.upload-preview img{width:62px;height:70px;object-fit:cover}
+.upload-preview span,.upload-state{font-size:10px;color:var(--olive)}
+.admin-checkbox{display:flex!important;align-items:center;grid-template-columns:16px 1fr;gap:10px!important}
+.admin-checkbox input{width:16px;height:16px;min-height:0}
+.activity-list p{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:10px}
+.activity-list time{color:var(--muted);font-size:9px}
+.profile-edit-form{margin:24px 0;padding-top:20px;border-top:1px solid var(--line)}
+.profile-edit-form label{display:grid;gap:8px;font-size:10px;color:var(--muted)}
+.profile-edit-form input{min-height:44px;border:1px solid var(--line);padding:10px;background:#fffdf8}
+.not-found-page{min-height:55vh;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+.not-found-page>p:not(.eyebrow){font-size:12px;color:var(--muted)}
+@media(max-width:720px){.admin-list-section{padding:17px;margin:24px 0}.admin-product-list article{grid-template-columns:48px 1fr auto;gap:10px}.admin-product-list img{width:48px;height:56px}.activity-list p{display:grid}.drawer-note{padding-bottom:18px}}
+
+.coupon-toggle{border:1px solid var(--line);background:transparent;padding:8px 12px;font-size:9px;cursor:pointer;color:var(--olive)}.coupon-toggle:hover{background:#e8eadf}

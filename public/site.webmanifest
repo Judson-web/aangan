@@ -1,0 +1,12 @@
+{
+  "name": "Thrilokha Shilpa",
+  "short_name": "Thrilokha",
+  "description": "The art of living beautifully.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f4ed",
+  "theme_color": "#596047",
+  "icons": [
+    {"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
