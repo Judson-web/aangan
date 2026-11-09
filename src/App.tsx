@@ -7,6 +7,7 @@ import { categories, formatPrice, products, type Category, type Product } from "
 
 type CartLine = { productId: string; quantity: number };
 type Panel = "cart" | "menu" | null;
+type SortOption = "featured" | "price-low" | "price-high" | "name";
 const CART_KEY = "aangan-cart-v1";
 const WISHLIST_KEY = "aangan-wishlist-v1";
 
@@ -86,6 +87,7 @@ function App() {
   const [newsletter, setNewsletter] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>("featured");
 
   useEffect(() => { persist(CART_KEY, cart); }, [cart]);
   useEffect(() => { persist(WISHLIST_KEY, wishlist); }, [wishlist]);
@@ -102,11 +104,17 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const visibleProducts = useMemo(() => products.filter((product) => {
-    const matchesCategory = category === "All" || product.category === category;
-    const haystack = `${product.name} ${product.maker} ${product.category} ${product.origin}`.toLowerCase();
-    return matchesCategory && haystack.includes(query.trim().toLowerCase()) && (!savedOnly || wishlist.includes(product.id));
-  }), [category, query, savedOnly, wishlist]);
+  const visibleProducts = useMemo(() => {
+    const filtered = products.filter((product) => {
+      const matchesCategory = category === "All" || product.category === category;
+      const haystack = `${product.name} ${product.maker} ${product.category} ${product.origin}`.toLowerCase();
+      return matchesCategory && haystack.includes(query.trim().toLowerCase()) && (!savedOnly || wishlist.includes(product.id));
+    });
+    if (sortBy === "price-low") filtered.sort((a, b) => a.price - b.price);
+    if (sortBy === "price-high") filtered.sort((a, b) => b.price - a.price);
+    if (sortBy === "name") filtered.sort((a, b) => a.name.localeCompare(b.name));
+    return filtered;
+  }, [category, query, savedOnly, wishlist, sortBy]);
   const cartCount = cart.reduce((total, line) => total + line.quantity, 0);
   const cartTotal = cart.reduce((total, line) => {
     const product = products.find((item) => item.id === line.productId);
@@ -194,7 +202,10 @@ function App() {
           <div className="filter-list" role="group" aria-label="Filter by category">
             {(["All", "Home", "Wear", "Jewellery", "Art"] as Category[]).map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => { setCategory(item); setSavedOnly(false); }}>{item}</button>)}
           </div>
-          <span>{visibleProducts.length} pieces</span>
+          <div className="collection-controls">
+            <span>{visibleProducts.length} pieces</span>
+            <label className="sort-control"><span>Sort</span><select aria-label="Sort products" value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name</option></select></label>
+          </div>
         </div>
         {savedOnly && <div className="saved-filter-note">Saved pieces <button onClick={() => setSavedOnly(false)}>Show all</button></div>}
         {visibleProducts.length ? <div className="product-grid">
@@ -233,7 +244,12 @@ function App() {
           if (!product) return null;
           return <div className="cart-line" key={line.productId}><img src={product.image} alt="" /><div className="cart-line-info"><span>{product.maker}</span><strong>{product.name}</strong><b>{formatPrice(product.price)}</b><div className="quantity-control"><button onClick={() => changeQuantity(product.id, -1)} aria-label="Decrease quantity"><Minus size={13} /></button><span>{line.quantity}</span><button onClick={() => changeQuantity(product.id, 1)} aria-label="Increase quantity"><Plus size={13} /></button></div></div><button className="remove-line" onClick={() => setCart((current) => current.filter((item) => item.productId !== product.id))} aria-label={`Remove ${product.name}`}><X size={16} /></button></div>;
         })}</div> : <div className="cart-empty"><ShoppingBag size={32} /><h3>Your bag is taking a breather.</h3><p>Find something thoughtful to bring home.</p><button className="primary-link" onClick={() => { setPanel(null); document.getElementById("collection")?.scrollIntoView({ behavior: "smooth" }); }}>Explore the collection <ArrowRight size={15} /></button></div>}
-        {cart.length > 0 && <div className="cart-summary"><div><span>Subtotal</span><strong>{formatPrice(cartTotal)}</strong></div><p>Shipping and taxes are calculated at checkout.</p><button className="checkout-button" onClick={() => setToast("Checkout will be available when the shop is connected.")}>Continue to checkout <ArrowRight size={17} /></button><small>Checkout is a preview. No payment will be taken.</small></div>}</>}
+        {cart.length > 0 && <div className="cart-summary">
+          <div className="shipping-progress">
+            <div className="shipping-progress-copy">{cartTotal >= 2500 ? <strong>You've unlocked complimentary shipping</strong> : <><strong>{formatPrice(2500 - cartTotal)} away</strong><span> from complimentary shipping</span></>}</div>
+            <div className="shipping-progress-track"><span style={{ width: `${Math.min(100, cartTotal / 2500 * 100)}%` }} /></div>
+          </div>
+          <div><span>Subtotal</span><strong>{formatPrice(cartTotal)}</strong></div><p>Shipping and taxes are calculated at checkout.</p><button className="checkout-button" onClick={() => setToast("Checkout will be available when the shop is connected.")}>Continue to checkout <ArrowRight size={17} /></button><small>Checkout is a preview. No payment will be taken.</small></div>}</>}
       </aside>
     </div>}
 
