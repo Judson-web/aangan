@@ -74,7 +74,7 @@ async function currentUser(request: Request, env: Env) {
   const token = cookieValue(request, AUTH_COOKIE);
   if (!token) return null;
   const tokenHash = await digest(token);
-  const row = await env.DB.prepare("SELECT p.id,p.email,p.display_name,p.role FROM sessions s JOIN profiles p ON p.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?").bind(tokenHash, Math.floor(Date.now()/1000)).first<{id:string;email:string;display_name:string;role:string}>();
+  const row = await env.DB.prepare("SELECT p.id,p.email,p.display_name,COALESCE(a.role,'customer') AS role FROM sessions s JOIN profiles p ON p.id=s.user_id LEFT JOIN store_admins a ON lower(a.email)=lower(p.email) WHERE s.token_hash=? AND s.expires_at>?").bind(tokenHash, Math.floor(Date.now()/1000)).first<{id:string;email:string;display_name:string;role:string}>();
   return row ?? null;
 }
 function authCookie(token: string, maxAge = AUTH_TTL) {
@@ -114,8 +114,6 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
     await env.DB.prepare("DELETE FROM auth_codes WHERE email=?").bind(email).run();
     const id=crypto.randomUUID();
     await env.DB.prepare("INSERT INTO profiles(id,email,display_name) VALUES(?,?,?) ON CONFLICT(email) DO NOTHING").bind(id,email,typeof data.name==="string"?data.name.trim().slice(0,80):"").run();
-    const adminEmails=(env.ADMIN_EMAILS??"").split(",").map(value=>value.trim().toLowerCase()).filter(Boolean);
-    if(adminEmails.includes(email)) await env.DB.prepare("UPDATE profiles SET role='admin',updated_at=CURRENT_TIMESTAMP WHERE email=?").bind(email).run();
     const profile=await env.DB.prepare("SELECT id,email,display_name,role FROM profiles WHERE email=?").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
     if(!profile) return json({error:"Account could not be created."},500);
     const token=crypto.randomUUID()+crypto.randomUUID(); const expires=Math.floor(Date.now()/1000)+AUTH_TTL;
@@ -137,7 +135,33 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
     return json({products:result.results});
   }
   if (url.pathname.startsWith("/api/admin/")) {
-    if(!user || user.role!=="admin") return json({error:"Administrator access required."},403);
+    if(!user || !["admin","super_admin"].includes(user.role)) return json({error:"Administrator access required."},403);
+    if(url.pathname==="/api/admin/admins" && method==="GET"){
+      if(user.role!=="super_admin") return json({error:"Only the super administrator can manage administrator accounts."},403);
+      const result=await env.DB.prepare("SELECT email,role,created_at,added_by_email FROM store_admins ORDER BY CASE role WHEN 'super_admin' THEN 0 ELSE 1 END,created_at ASC").all();
+      return json({admins:result.results});
+    }
+    if(url.pathname==="/api/admin/admins" && method==="POST"){
+      if(user.role!=="super_admin") return json({error:"Only the super administrator can add administrators."},403);
+      const d=await body(); const email=typeof d.email==="string"?d.email.trim().toLowerCase():"";
+      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254) return json({error:"Enter a valid administrator email address."},400);
+      const existing=await env.DB.prepare("SELECT role FROM store_admins WHERE email=?").bind(email).first<{role:string}>();
+      if(existing?.role==="super_admin") return json({error:"This account is already a super administrator."},409);
+      await env.DB.prepare("INSERT INTO store_admins(email,role,added_by_email) VALUES(?,'admin',?) ON CONFLICT(email) DO UPDATE SET role='admin',added_by_email=excluded.added_by_email WHERE store_admins.role!='super_admin'").bind(email,user.email).run();
+      await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"added","administrator",email).run();
+      return json({ok:true,email,role:"admin"},201);
+    }
+    if(url.pathname.startsWith("/api/admin/admins/") && method==="DELETE"){
+      if(user.role!=="super_admin") return json({error:"Only the super administrator can remove administrators."},403);
+      const email=decodeURIComponent(url.pathname.slice("/api/admin/admins/".length)).trim().toLowerCase();
+      if(email===user.email.toLowerCase()) return json({error:"You cannot remove your own super administrator access."},400);
+      const target=await env.DB.prepare("SELECT role FROM store_admins WHERE email=?").bind(email).first<{role:string}>();
+      if(!target) return json({error:"Administrator not found."},404);
+      if(target.role==="super_admin") return json({error:"A super administrator cannot be removed here."},403);
+      await env.DB.prepare("DELETE FROM store_admins WHERE email=? AND role='admin'").bind(email).run();
+      await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"removed","administrator",email).run();
+      return json({ok:true});
+    }
     if(url.pathname==="/api/admin/products" && method==="GET"){
       const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,stock,active,created_at,updated_at FROM products ORDER BY created_at DESC").all();
       return json({products:result.results});
