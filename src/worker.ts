@@ -16,6 +16,8 @@ interface Env {
   AUTH_FROM_EMAIL?: string;
   SESSION_SECRET?: string;
   ADMIN_EMAILS?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_PUBLISHABLE_KEY?: string;
 }
 const COOKIE_NAME = "thrilokha_human";
 const SESSION_TTL = 60 * 60 * 24 * 30;
@@ -62,29 +64,25 @@ function challengePage() {
   return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; img-src data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'", "Referrer-Policy": "strict-origin-when-cross-origin", "X-Content-Type-Options": "nosniff" } });
 }
 
-const AUTH_COOKIE = "thrilokha_session";
-const AUTH_TTL = 60 * 60 * 24 * 30;
-const enc = new TextEncoder();
-const hex = (bytes: ArrayBuffer) => [...new Uint8Array(bytes)].map((v) => v.toString(16).padStart(2, "0")).join("");
-async function digest(value: string) { return hex(await crypto.subtle.digest("SHA-256", enc.encode(value))); }
-function cookieValue(request: Request, name: string) {
-  return (request.headers.get("Cookie") ?? "").split(";").map((part) => part.trim()).find((part) => part.startsWith(name + "="))?.slice(name.length + 1) ?? "";
-}
 async function currentUser(request: Request, env: Env) {
-  const token = cookieValue(request, AUTH_COOKIE);
-  if (!token) return null;
-  const tokenHash = await digest(token);
-  const row = await env.DB.prepare("SELECT p.id,p.email,p.display_name,COALESCE(a.role,'customer') AS role FROM sessions s JOIN profiles p ON p.id=s.user_id LEFT JOIN store_admins a ON lower(a.email)=lower(p.email) WHERE s.token_hash=? AND s.expires_at>?").bind(tokenHash, Math.floor(Date.now()/1000)).first<{id:string;email:string;display_name:string;role:string}>();
-  return row ?? null;
+  const authorization = request.headers.get("Authorization") ?? "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+  if (!token || !env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return null;
+  try {
+    const response = await fetch(env.SUPABASE_URL + "/auth/v1/user", {
+      headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, Authorization: "Bearer " + token },
+    });
+    if (!response.ok) return null;
+    const identity = await response.json() as { id?: string; email?: string; email_confirmed_at?: string | null; user_metadata?: { full_name?: string; name?: string } };
+    if (!identity.id || !identity.email || !identity.email_confirmed_at) return null;
+    const email = identity.email.trim().toLowerCase();
+    const displayName = (identity.user_metadata?.full_name ?? identity.user_metadata?.name ?? "").slice(0, 80);
+    await env.DB.prepare("INSERT INTO profiles(id,email,display_name) VALUES(?,?,?) ON CONFLICT(email) DO NOTHING").bind(identity.id,email,displayName).run();
+    const row = await env.DB.prepare("SELECT p.id,p.email,p.display_name,COALESCE(a.role,'customer') AS role FROM profiles p LEFT JOIN store_admins a ON lower(a.email)=lower(p.email) WHERE lower(p.email)=lower(?)").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
+    return row ?? null;
+  } catch { return null; }
 }
-function authCookie(token: string, maxAge = AUTH_TTL) {
-  return `${AUTH_COOKIE}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
-}
-async function sendLoginCode(email: string, code: string, env: Env) {
-  if (!env.RESEND_API_KEY || !env.AUTH_FROM_EMAIL) throw new Error("Email sign-in is not configured yet. The store administrator must configure the verified sender address and email provider.");
-  const response = await fetch("https://api.resend.com/emails", {method:"POST",headers:{"Authorization":`Bearer ${env.RESEND_API_KEY}`,"Content-Type":"application/json"},body:JSON.stringify({from:env.AUTH_FROM_EMAIL,to:[email],subject:"Your Thrilokha Shilpa sign-in code",html:`<div style="font-family:Georgia,serif;color:#292b24"><p style="letter-spacing:3px">THRILOKHA SHILPA</p><h1 style="font-weight:400">Your sign-in code</h1><p style="font-size:32px;letter-spacing:8px">${code}</p><p>This code expires in 10 minutes. If you did not request it, you can ignore this email.</p></div>`})});
-  if (!response.ok) throw new Error("We could not send your sign-in email. Please try again later.");
-}
+
 async function api(request: Request, env: Env, url: URL): Promise<Response | null> {
   if (!url.pathname.startsWith("/api/")) return null;
   if (url.pathname === "/api/human-status" || url.pathname === "/api/verify-human") return null;
@@ -93,37 +91,6 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
   const user = await currentUser(request,env);
   const body = async () => await request.json() as Record<string, unknown>;
   if (url.pathname === "/api/auth/me" && method === "GET") return json({user});
-  if (url.pathname === "/api/auth/request-code" && method === "POST") {
-    const data=await body(); const email=typeof data.email==="string"?data.email.trim().toLowerCase():"";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length>254) return json({error:"Enter a valid email address."},400);
-    const recent=await env.DB.prepare("SELECT created_at FROM auth_codes WHERE email=?").bind(email).first<{created_at:number}>();
-    if (recent && Date.now()/1000-recent.created_at<60) return json({error:"Please wait a minute before requesting another code."},429);
-    const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0");
-    const codeHash=await digest(code+ (env.SESSION_SECRET??env.TURNSTILE_SECRET_KEY));
-    await env.DB.prepare("INSERT INTO auth_codes(email,code_hash,expires_at,attempts,created_at) VALUES(?,?,?,0,?) ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash,expires_at=excluded.expires_at,attempts=0,created_at=excluded.created_at").bind(email,codeHash,Math.floor(Date.now()/1000)+600,Math.floor(Date.now()/1000)).run();
-    try { await sendLoginCode(email,code,env); } catch(e) { return json({error:e instanceof Error?e.message:"Email service unavailable."},503); }
-    return json({sent:true});
-  }
-  if (url.pathname === "/api/auth/verify-code" && method === "POST") {
-    const data=await body(); const email=typeof data.email==="string"?data.email.trim().toLowerCase():""; const code=typeof data.code==="string"?data.code.trim():"";
-    const record=await env.DB.prepare("SELECT code_hash,expires_at,attempts FROM auth_codes WHERE email=?").bind(email).first<{code_hash:string;expires_at:number;attempts:number}>();
-    if (!record || record.expires_at<Math.floor(Date.now()/1000) || record.attempts>=5 || !/^\d{6}$/.test(code) || await digest(code+(env.SESSION_SECRET??env.TURNSTILE_SECRET_KEY))!==record.code_hash) {
-      if(record) await env.DB.prepare("UPDATE auth_codes SET attempts=attempts+1 WHERE email=?").bind(email).run();
-      return json({error:"That code is invalid or expired. Request a fresh one and try again."},400);
-    }
-    await env.DB.prepare("DELETE FROM auth_codes WHERE email=?").bind(email).run();
-    const id=crypto.randomUUID();
-    await env.DB.prepare("INSERT INTO profiles(id,email,display_name) VALUES(?,?,?) ON CONFLICT(email) DO NOTHING").bind(id,email,typeof data.name==="string"?data.name.trim().slice(0,80):"").run();
-    const profile=await env.DB.prepare("SELECT p.id,p.email,p.display_name,COALESCE(a.role,'customer') AS role FROM profiles p LEFT JOIN store_admins a ON lower(a.email)=lower(p.email) WHERE p.email=?").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
-    if(!profile) return json({error:"Account could not be created."},500);
-    const token=crypto.randomUUID()+crypto.randomUUID(); const expires=Math.floor(Date.now()/1000)+AUTH_TTL;
-    await env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)").bind(await digest(token),profile.id,expires,Math.floor(Date.now()/1000)).run();
-    return json({user:profile},200,{"Set-Cookie":authCookie(token)});
-  }
-  if (url.pathname === "/api/auth/logout" && method === "POST") {
-    const token=cookieValue(request,AUTH_COOKIE); if(token) await env.DB.prepare("DELETE FROM sessions WHERE token_hash=?").bind(await digest(token)).run();
-    return json({ok:true},200,{"Set-Cookie":authCookie("",0)});
-  }
   if(url.pathname==="/api/profile" && method==="PUT"){
     if(!user) return json({error:"Sign in to update your profile."},401);
     const d=await body(); const displayName=typeof d.displayName==="string"?d.displayName.trim().slice(0,80):"";
