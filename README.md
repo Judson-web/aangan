@@ -11,7 +11,7 @@ Thrilokha Shilpa is a contemporary Indian lifestyle and design brand. It pairs a
 - **Responsive navigation:** desktop category ribbon, mobile navigation dock, menu drawer and search.
 - **Human verification:** Cloudflare Turnstile managed challenge enforced at the Worker document boundary. The Worker verifies Siteverify success and the expected hostname, then issues a signed, HttpOnly, Secure, SameSite cookie that remembers a successful verification for 30 days. Unverified document requests receive the challenge page before the storefront HTML is served.
 
-The storefront does not seed fake products, prices, orders or customer activity. The catalogue starts empty and is populated by an administrator. Product records, customer profiles, email verification codes, sessions, cart lines, wishlists, coupons, admin audit events and uploaded product images are persisted in Cloudflare D1. Uploaded images are limited to 1 MB each while the account's R2 service remains disabled; enable R2 before accepting a large image catalogue. Checkout is intentionally a preview only: no payment is taken, and orders, revenue, fulfilment and shipping workflows are not represented as live.
+The storefront does not seed fake products, prices, orders or customer activity. The catalogue starts empty and is populated by an administrator. Product records, customer profiles, Supabase Auth identities, cart lines, wishlists, coupons, admin audit events and uploaded product images are persisted in Cloudflare D1. Uploaded images are limited to 1 MB each while the account's R2 service remains disabled; enable R2 before accepting a large image catalogue. Checkout is intentionally a preview only: no payment is taken, and orders, revenue, fulfilment and shipping workflows are not represented as live.
 
 ## Design direction
 
@@ -45,12 +45,12 @@ npm run build
 
 ## Cloudflare configuration
 
-The production Worker is named `aangan` and serves the storefront at `https://aangan.ks-redeemer.workers.dev`.
+The production Worker is named `thrilokha-shilpa` and serves the storefront at `https://thrilokha-shilpa.ks-redeemer.workers.dev`.
 
-1. In Cloudflare, open **Turnstile** and confirm the widget named **Thrilokha Shilpa storefront human verification**. Its allowed hostname is `aangan.ks-redeemer.workers.dev`, and its mode is Managed.
-2. Add the widget's secret key to the `aangan` Worker as a secret named `TURNSTILE_SECRET_KEY`. Do not put the secret in source control or a `VITE_*` variable.
+1. In Cloudflare, open **Turnstile** and confirm the widget named **Thrilokha Shilpa storefront human verification**. Its allowed hostname is `thrilokha-shilpa.ks-redeemer.workers.dev`, and its mode is Managed.
+2. Add the widget's secret key to the `thrilokha-shilpa` Worker as a secret named `TURNSTILE_SECRET_KEY`. Do not put the secret in source control or a `VITE_*` variable.
 3. The public site key is configured in `src/App.tsx`. If the widget is ever recreated, update `TURNSTILE_SITE_KEY` there with its new public site key.
-4. Production deploys are handled by the connected Cloudflare Workers Builds pipeline on pushes to `main`. The Worker intercepts browser document requests before serving the storefront. Visitors without a valid signed session receive a Cloudflare Turnstile managed challenge. The Worker verifies each token against Cloudflare Siteverify, checks the expected hostname, and issues a signed 30-day HttpOnly cookie. The browser cannot mint or edit this cookie. Static asset requests remain cacheable and do not need a separate challenge.
+4. Production deploys are handled by the connected Cloudflare Workers Builds pipeline on pushes to `main`. The Worker script and workers.dev hostname use the `thrilokha-shilpa` brand slug. The Worker intercepts browser document requests before serving the storefront. Visitors without a valid signed session receive a Cloudflare Turnstile managed challenge. The Worker verifies each token against Cloudflare Siteverify, checks the expected hostname, and issues a signed 30-day HttpOnly cookie. The browser cannot mint or edit this cookie. Static asset requests remain cacheable and do not need a separate challenge.
 
 To add the Worker secret with Wrangler:
 
@@ -66,25 +66,22 @@ Cloudflare Workers Builds watches the repository's `main` branch and runs `npm r
 
 - `src/App.tsx`: routed storefront, catalogue interactions and verification UI.
 - `src/catalog.ts`: category taxonomy and price formatting; live products are loaded from Cloudflare D1.
-- `src/worker.ts`: server-enforced Turnstile gate, email-code authentication, HttpOnly sessions, role-checked admin APIs, Cloudflare D1 persistence and product media delivery.
+- `src/worker.ts`: server-enforced Turnstile gate, Supabase Auth token verification, role-checked admin APIs, Cloudflare D1 persistence and product media delivery.
 - `src/styles.css`: responsive visual system.
 - `wrangler.jsonc`: Worker entry point and static asset binding.
 - `.github/workflows/`: CI and production deployment.
 
 ## Commerce backend setup
 
-The production Worker is bound to the Cloudflare D1 database `thrilokha-commerce`. Its schema includes products, profiles, email verification codes, sessions, cart items, wishlist items, coupons, admin audit events and product media. The catalogue intentionally starts empty.
+The production Worker is bound to the Cloudflare D1 database `thrilokha-commerce`. Its schema includes products, profiles, cart items, wishlist items, coupons, admin audit events and product media. The catalogue intentionally starts empty.
 
-Configure these Worker secrets before enabling customer sign-in and administrator access:
+Configure the Cloudflare Turnstile secret before enabling storefront human verification:
 
 ```bash
-npx wrangler secret put RESEND_API_KEY
-npx wrangler secret put AUTH_FROM_EMAIL
-npx wrangler secret put SESSION_SECRET
-npx wrangler secret put ADMIN_EMAILS
+npx wrangler secret put TURNSTILE_SECRET_KEY
 ```
 
-`AUTH_FROM_EMAIL` must be a sender address verified by the Resend account. `SESSION_SECRET` should be a long random secret. `ADMIN_EMAILS` is a comma-separated server-side allowlist of email addresses that receive the administrator role when they verify their email. It is never editable from the customer-facing app. Existing roles can also be granted directly in D1 by the owner. Never add administrator role controls to a public profile form.
+Customer sign-in uses Supabase Auth email magic links. Configure the production Site URL and redirect allow-list in the Supabase Auth dashboard. Store administrator roles in the protected D1 `store_admins` table; never trust user-editable metadata for authorization.
 
 The private `/admin` route is only a user interface boundary. Every admin API independently checks the authenticated session and database role before reading or changing store data. The dashboard refreshes product, customer, coupon and audit statistics every 30 seconds. Orders and revenue are explicitly shown as unavailable until a payment provider and order pipeline are implemented.
 
