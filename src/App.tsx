@@ -10,12 +10,39 @@ type Panel = "cart" | "menu" | null;
 const CART_KEY = "aangan-cart-v1";
 const WISHLIST_KEY = "aangan-wishlist-v1";
 
-function readStored<T,>(key: string, fallback: T): T {
+function readCart(): CartLine[] {
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
-    return value === null ? fallback : value as T;
+    const value: unknown = JSON.parse(localStorage.getItem(CART_KEY) ?? "null");
+    if (!Array.isArray(value)) return [];
+    return value.filter((line): line is CartLine =>
+      typeof line === "object" && line !== null &&
+      "productId" in line && typeof line.productId === "string" &&
+      products.some((product) => product.id === line.productId) &&
+      "quantity" in line && typeof line.quantity === "number" &&
+      Number.isSafeInteger(line.quantity) && line.quantity > 0,
+    );
   } catch {
-    return fallback;
+    return [];
+  }
+}
+
+function readWishlist(): string[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(WISHLIST_KEY) ?? "null");
+    if (!Array.isArray(value)) return [];
+    return [...new Set(value.filter((id): id is string =>
+      typeof id === "string" && products.some((product) => product.id === id),
+    ))];
+  } catch {
+    return [];
+  }
+}
+
+function persist(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // The storefront remains usable when browser storage is unavailable.
   }
 }
 
@@ -53,14 +80,14 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [panel, setPanel] = useState<Panel>(null);
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
-  const [cart, setCart] = useState<CartLine[]>(() => readStored<CartLine[]>(CART_KEY, []));
-  const [wishlist, setWishlist] = useState<string[]>(() => readStored<string[]>(WISHLIST_KEY, []));
+  const [cart, setCart] = useState<CartLine[]>(readCart);
+  const [wishlist, setWishlist] = useState<string[]>(readWishlist);
   const [toast, setToast] = useState("");
   const [newsletter, setNewsletter] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
-  useEffect(() => { localStorage.setItem(CART_KEY, JSON.stringify(cart)); }, [cart]);
-  useEffect(() => { localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist)); }, [wishlist]);
+  useEffect(() => { persist(CART_KEY, cart); }, [cart]);
+  useEffect(() => { persist(WISHLIST_KEY, wishlist); }, [wishlist]);
   useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(""), 2600);
