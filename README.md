@@ -50,7 +50,7 @@ The production Worker is named `aangan` and serves the storefront at `https://aa
 1. In Cloudflare, open **Turnstile** and confirm the widget named **Thrilokha Shilpa storefront human verification**. Its allowed hostname is `aangan.ks-redeemer.workers.dev`, and its mode is Managed.
 2. Add the widget's secret key to the `aangan` Worker as a secret named `TURNSTILE_SECRET_KEY`. Do not put the secret in source control or a `VITE_*` variable.
 3. The public site key is configured in `src/App.tsx`. If the widget is ever recreated, update `TURNSTILE_SITE_KEY` there with its new public site key.
-4. Deploy the Worker with the production GitHub Actions workflow. The Worker intercepts browser document requests before serving the storefront. Visitors without a valid signed session receive a Cloudflare Turnstile managed challenge. The Worker verifies each token against Cloudflare Siteverify, checks the expected hostname, and issues a signed 30-day HttpOnly cookie. The browser cannot mint or edit this cookie. Static asset requests remain cacheable and do not need a separate challenge.
+4. Production deploys are handled by the connected Cloudflare Workers Builds pipeline on pushes to `main`. The Worker intercepts browser document requests before serving the storefront. Visitors without a valid signed session receive a Cloudflare Turnstile managed challenge. The Worker verifies each token against Cloudflare Siteverify, checks the expected hostname, and issues a signed 30-day HttpOnly cookie. The browser cannot mint or edit this cookie. Static asset requests remain cacheable and do not need a separate challenge.
 
 To add the Worker secret with Wrangler:
 
@@ -60,7 +60,7 @@ npx wrangler secret put TURNSTILE_SECRET_KEY
 
 Paste the Turnstile secret when prompted. The Worker also needs the `ASSETS` binding configured in `wrangler.jsonc`; it is already declared in this repository.
 
-GitHub Actions uses the repository secret `CLOUDFLARE_API_TOKEN` for permanent production deployments. Temporary deployments are not used for production.
+Cloudflare Workers Builds watches the repository's `main` branch and runs `npm run build` followed by `npx wrangler deploy` using its Cloudflare-managed build token. Pull-request preview deployments are disabled for this production Worker.
 
 ## Project structure
 
