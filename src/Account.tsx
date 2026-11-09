@@ -148,7 +148,9 @@ export default function AccountPage({ mode }: Props) {
     finally{setBusy(false);}
   }
   async function signOut(){
-    await supabaseSignOut();
+    setBusy(true);setNotice("");
+    const {error}=await supabaseSignOut();
+    if(error){setBusy(false);setNotice("We couldn't sign you out. Please try again.");return;}
     window.location.assign("/");
   }
   async function saveProfile(e:FormEvent){
@@ -284,7 +286,8 @@ export default function AccountPage({ mode }: Props) {
       <button className="back-link" onClick={signOut}><LogOut size={15}/> Sign out</button>
       {notice&&<p className="admin-notice" role="status">{notice}</p>}
     </div>:<div className="account-panel"><h2>Welcome to your account</h2><p>Sign in to keep your bag and saved pieces with you across devices.</p><a className="checkout-button" href="/login">Sign in or create account <ArrowRight size={16}/></a></div>)}
-    {mode==="admin"&&((user?.role==="admin"||user?.role==="super_admin")?<>
+    {mode==="admin"&&authLoading&&<div className="account-panel auth-loading">Verifying store access…</div>}
+    {mode==="admin"&&!authLoading&&((user?.role==="admin"||user?.role==="super_admin")?<>
       <div className="admin-stats">{[
         ["Live products",stats?.products??"…"],["Customer accounts",stats?.customers??"…"],["Orders",stats?.paymentsEnabled?stats.orders:"Not live"],["Active coupons",stats?.activeCoupons??"…"]
       ].map(([label,value])=><article key={String(label)}><small>{String(label)}</small><strong>{String(value)}</strong></article>)}</div>
