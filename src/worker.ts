@@ -5,6 +5,7 @@ interface Env {
   RESEND_API_KEY?: string;
   AUTH_FROM_EMAIL?: string;
   SESSION_SECRET?: string;
+  ADMIN_EMAILS?: string;
 }
 const COOKIE_NAME = "thrilokha_human";
 const SESSION_TTL = 60 * 60 * 24 * 30;
@@ -103,6 +104,8 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
     await env.DB.prepare("DELETE FROM auth_codes WHERE email=?").bind(email).run();
     const id=crypto.randomUUID();
     await env.DB.prepare("INSERT INTO profiles(id,email,display_name) VALUES(?,?,?) ON CONFLICT(email) DO NOTHING").bind(id,email,typeof data.name==="string"?data.name.trim().slice(0,80):"").run();
+    const adminEmails=(env.ADMIN_EMAILS??"").split(",").map(value=>value.trim().toLowerCase()).filter(Boolean);
+    if(adminEmails.includes(email)) await env.DB.prepare("UPDATE profiles SET role='admin',updated_at=CURRENT_TIMESTAMP WHERE email=?").bind(email).run();
     const profile=await env.DB.prepare("SELECT id,email,display_name,role FROM profiles WHERE email=?").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
     if(!profile) return json({error:"Account could not be created."},500);
     const token=crypto.randomUUID()+crypto.randomUUID(); const expires=Math.floor(Date.now()/1000)+AUTH_TTL;
@@ -119,28 +122,48 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
   }
   if (url.pathname.startsWith("/api/admin/")) {
     if(!user || user.role!=="admin") return json({error:"Administrator access required."},403);
+    if(url.pathname==="/api/admin/products" && method==="GET"){
+      const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,stock,active,created_at,updated_at FROM products ORDER BY created_at DESC").all();
+      return json({products:result.results});
+    }
+    if(url.pathname==="/api/admin/coupons" && method==="GET"){
+      const result=await env.DB.prepare("SELECT id,code,discount_type,discount_value,min_order_value,max_uses,used_count,starts_at,expires_at,active,created_at FROM coupons ORDER BY created_at DESC").all();
+      return json({coupons:result.results});
+    }
+    if(url.pathname==="/api/admin/media" && method==="POST"){
+      const form=await request.formData();
+      const file=form.get("file");
+      if(!(file instanceof File)) return json({error:"Choose an image to upload."},400);
+      const allowed=new Set(["image/jpeg","image/png","image/webp","image/avif"]);
+      if(!allowed.has(file.type)) return json({error:"Use a JPG, PNG, WebP or AVIF image."},415);
+      if(file.size<1 || file.size>1048576) return json({error:"Images must be 1 MB or smaller. Resize or compress the image and try again."},413);
+      const id=crypto.randomUUID();
+      await env.DB.prepare("INSERT INTO product_media(id,mime_type,data,byte_size) VALUES(?,?,?,?)").bind(id,file.type,new Uint8Array(await file.arrayBuffer()),file.size).run();
+      await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"uploaded","media",id).run();
+      return json({id,url:"/media/"+id},201);
+    }
     if(url.pathname==="/api/admin/stats" && method==="GET"){
       const [productsCount,customers,orders,coupons,activity]=await Promise.all([
         env.DB.prepare("SELECT COUNT(*) AS count FROM products WHERE active=1").first(),
         env.DB.prepare("SELECT COUNT(*) AS count FROM profiles WHERE role='customer'").first(),
-        env.DB.prepare("SELECT COUNT(*) AS count FROM admin_events").first(),
+        env.DB.prepare("SELECT 0 AS count").first(),
         env.DB.prepare("SELECT COUNT(*) AS count FROM coupons WHERE active=1").first(),
         env.DB.prepare("SELECT action,entity_type,created_at FROM admin_events ORDER BY created_at DESC LIMIT 8").all()
       ]);
-      return json({products:productsCount?.count??0,customers:customers?.count??0,orders:orders?.count??0,activeCoupons:coupons?.count??0,recentActivity:activity.results});
+      return json({products:productsCount?.count??0,customers:customers?.count??0,orders:0,revenue:0,paymentsEnabled:false,activeCoupons:coupons?.count??0,recentActivity:activity.results});
     }
     if(url.pathname==="/api/admin/products" && method==="POST"){
       const d=await body(); const id=crypto.randomUUID(); const name=String(d.name??"").trim(); const price=Number(d.price);
       if(!name || !Number.isSafeInteger(price) || price<0) return json({error:"Product name and a valid price are required."},400);
       const slug=String(d.slug??name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")).slice(0,120);
-      await env.DB.prepare("INSERT INTO products(id,slug,name,description,category,price,compare_at_price,image_url,stock) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,slug,name,String(d.description??""),String(d.category??"General"),price,Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,String(d.imageUrl??""),Math.max(0,Number(d.stock??0))).run();
+      await env.DB.prepare("INSERT INTO products(id,slug,name,description,category,price,compare_at_price,image_url,stock) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,slug,name,String(d.description??""),String(d.category??"General"),price,Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,String(d.imageUrl??""),Math.max(0,Math.min(100000,Number(d.stock??0)))).run();
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"created","product",id).run();
       return json({id},201);
     }
     if(url.pathname.startsWith("/api/admin/products/") && method==="PUT"){
       const id=decodeURIComponent(url.pathname.split("/").pop()??""); const d=await body(); const price=Number(d.price);
       if(!String(d.name??"").trim() || !Number.isSafeInteger(price) || price<0) return json({error:"Product name and a valid price are required."},400);
-      await env.DB.prepare("UPDATE products SET name=?,description=?,category=?,price=?,compare_at_price=?,image_url=?,stock=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(String(d.name),String(d.description??""),String(d.category??"General"),price,Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,String(d.imageUrl??""),Math.max(0,Number(d.stock??0)),d.active===false?0:1,id).run();
+      await env.DB.prepare("UPDATE products SET name=?,description=?,category=?,price=?,compare_at_price=?,image_url=?,stock=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(String(d.name),String(d.description??""),String(d.category??"General"),price,Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,String(d.imageUrl??""),Math.max(0,Math.min(100000,Number(d.stock??0))),d.active===false?0:1,id).run();
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"updated","product",id).run();
       return json({ok:true});
     }
@@ -184,6 +207,13 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if(url.pathname.startsWith("/media/") && request.method==="GET"){
+      const id=decodeURIComponent(url.pathname.slice("/media/".length));
+      if(!/^[0-9a-f-]{36}$/i.test(id)) return new Response("Not found",{status:404});
+      const media=await env.DB.prepare("SELECT mime_type,data FROM product_media WHERE id=?").bind(id).first<{mime_type:string;data:ArrayBuffer}>();
+      if(!media) return new Response("Not found",{status:404});
+      return new Response(media.data,{headers:{"Content-Type":media.mime_type,"Cache-Control":"public, max-age=31536000, immutable","X-Content-Type-Options":"nosniff"}});
+    }
     const apiResponse = await api(request, env, url);
     if (apiResponse) return apiResponse;
     if (url.pathname === "/api/human-status" && request.method === "GET") {
