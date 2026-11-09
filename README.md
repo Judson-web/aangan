@@ -15,7 +15,7 @@ The storefront does not seed fake products, prices, orders or customer activity.
 
 ## Design direction
 
-The storefront uses the existing warm neutral, olive and natural-texture palette, with a more dramatic editorial serif inspired by fashion-magazine typography. The layout borrows familiar shopping conventions from large marketplaces without copying their branding or exact interface.
+The storefront uses a disciplined red, black and warm-white palette, with editorial serif typography, restrained ornamental artwork and a direct-to-catalogue homepage. Product rows scroll horizontally on touch devices, while navigation and page layouts adapt to mobile screens. The interface follows familiar commerce conventions without copying another retailer’s branding or exact layout.
 
 ## Stack
 
@@ -81,7 +81,7 @@ Configure the Cloudflare Turnstile secret before enabling storefront human verif
 npx wrangler secret put TURNSTILE_SECRET_KEY
 ```
 
-Customer sign-in uses Supabase Auth email magic links. Configure the production Site URL and redirect allow-list in the Supabase Auth dashboard. Store administrator roles in the protected D1 `store_admins` table; never trust user-editable metadata for authorization.
+Customer authentication uses Supabase Auth with email/password sign-up and sign-in, email confirmation, password recovery and optional email magic-link sign-in. The client enables PKCE session handling and automatic URL callback detection. Configure the production Site URL and the exact `/profile` redirect URL in the Supabase Auth dashboard. The signup and password-reset flows require working custom SMTP; test delivery and callback completion before opening registration to customers. Store administrator roles in the protected D1 `store_admins` table; never trust user-editable metadata for authorization.
 
 The private `/admin` route is only a user interface boundary. Every admin API independently checks the authenticated session and database role before reading or changing store data. The dashboard refreshes product, customer, coupon and audit statistics every 30 seconds. Orders and revenue are explicitly shown as unavailable until a payment provider and order pipeline are implemented.
 
