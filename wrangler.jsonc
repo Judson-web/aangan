@@ -10,5 +10,6 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "account_id": "b45bd4f50a1e0280366712348fe2055a"
 }
