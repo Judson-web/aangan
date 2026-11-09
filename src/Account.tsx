@@ -27,7 +27,9 @@ export default function AccountPage({ mode }: Props) {
   const [busy,setBusy]=useState(false);
   const [stats,setStats]=useState<Stats|null>(null);
   const [products,setProducts]=useState<Product[]>([]);
-  const [coupons,setCoupons]=useState<Coupon[]>([]);\n  const [admins,setAdmins]=useState<AdminAccount[]>([]);\n  const [newAdminEmail,setNewAdminEmail]=useState("");
+  const [coupons,setCoupons]=useState<Coupon[]>([]);
+  const [admins,setAdmins]=useState<AdminAccount[]>([]);
+  const [newAdminEmail,setNewAdminEmail]=useState("");
   const [product,setProduct]=useState(blankProduct);
   const [editingId,setEditingId]=useState<string|null>(null);
   const [coupon,setCoupon]=useState(blankCoupon);
@@ -45,7 +47,7 @@ export default function AccountPage({ mode }: Props) {
   },[user?.role]);
   useEffect(()=>{request<{user:User|null}>("/api/auth/me").then(d=>{setUser(d.user);setDisplayName(d.user?.display_name??"");}).catch(()=>setUser(null));},[]);
   useEffect(()=>{
-    if(mode!=="admin"||user?.role!=="admin")return;
+    if(mode!=="admin"||!(["admin","super_admin"] as const).includes(user?.role as "admin"|"super_admin"))return;
     let alive=true;
     const refresh=()=>loadAdmin().catch(e=>{if(alive)setNotice(e instanceof Error?e.message:"Could not refresh store data.");});
     refresh();
