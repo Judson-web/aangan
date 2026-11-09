@@ -104,7 +104,7 @@ export default function AccountPage({ mode }: Props) {
         return;
       }
       if(authMethod==="link"){
-        const {error}=await requestEmailLink(email,"",false);
+        const {error}=await requestEmailLink(email,false);
         if(error)throw error;
         setSentMessage("A secure sign-in link is on its way. Open it on this device to finish signing in.");
         setStep("sent");
