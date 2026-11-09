@@ -151,8 +151,9 @@ function App() {
     <header className="site-header">
       <button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setPanel("menu")}><Menu /></button>
       <nav className="desktop-nav" aria-label="Main navigation">
-        <a href="#collection" onClick={() => setCategory("All")}>Shop all</a>
-        <a href="#categories">Discover</a>
+        <a href="#collection" onClick={() => { setCategory("All"); setSavedOnly(false); }}>Shop all</a>
+        <a href="#categories">Collections</a>
+        <a href="#journal">The edit</a>
         <a href="#story">Our story</a>
       </nav>
       <BrandMark />
@@ -194,16 +195,41 @@ function App() {
         </div>
       </section>
 
+      <section className="editorial-section" id="journal">
+        <div className="editorial-intro">
+          <p className="eyebrow">AANGAN, IN GOOD COMPANY</p>
+          <h2>Little details.<br /><em>Big feeling.</em></h2>
+          <p>Thoughtful finds for the spaces, rituals and people that make a place feel like yours.</p>
+          <a className="text-link" href="#collection">Explore the edit <ArrowUpRight size={16} /></a>
+          <span className="editorial-flower" aria-hidden="true">✳</span>
+        </div>
+        <a className="editorial-tile editorial-tile-large" href="#collection" onClick={() => { setCategory("Home"); setSavedOnly(false); }}>
+          <img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=90" alt="Warm, artful home with natural textures and handcrafted objects" loading="lazy" />
+          <span className="tile-kicker">01 · THE SLOW HOME</span><span className="tile-title">Make room<br />for meaning <ArrowUpRight size={19} /></span>
+        </a>
+        <a className="editorial-tile editorial-tile-small" href="#collection" onClick={() => { setCategory("Wear"); setSavedOnly(false); }}>
+          <img src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=900&q=90" alt="Indian handloom textile in rich, natural colours" loading="lazy" />
+          <span className="tile-kicker">02 · WOVEN STORIES</span><span className="tile-title">Wear your<br />own story <ArrowUpRight size={18} /></span>
+        </a>
+        <div className="editorial-note"><span>✳</span><p>Not mass made.<br />Made to mean more.</p><small>CRAFT · CULTURE · CONSIDERATION</small></div>
+      </section>
+
+      <section className="promise-strip" aria-label="Aangan promises">
+        <div><Leaf size={17} /><span>Made by independent makers</span></div><i />
+        <div><Heart size={17} /><span>Chosen with intention</span></div><i />
+        <div><ShoppingBag size={17} /><span>Thoughtful from cart to doorstep</span></div>
+      </section>
+
       <section className="collection-section section-pad" id="collection">
         <div className="section-heading collection-heading">
-          <div><p className="eyebrow">THE COLLECTION</p><h2>Made to <em>belong.</em></h2></div>
+          <div><p className="eyebrow">THE AANGAN MARKETPLACE</p><h2>Good things, <em>gathered.</em></h2><p className="collection-subtitle">A considered collection of objects made with skill, soul and a sense of place.</p></div>
         </div>
         <div className="collection-toolbar">
           <div className="filter-list" role="group" aria-label="Filter by category">
             {(["All", "Home", "Wear", "Jewellery", "Art"] as Category[]).map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => { setCategory(item); setSavedOnly(false); }}>{item}</button>)}
           </div>
           <div className="collection-controls">
-            <span>{visibleProducts.length} pieces</span>
+            <span>{visibleProducts.length} thoughtfully found pieces</span>
             <label className="sort-control"><span>Sort</span><select aria-label="Sort products" value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="featured">Featured</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name</option></select></label>
           </div>
         </div>
