@@ -75,7 +75,11 @@ async function currentUser(request: Request, env: Env) {
   if (!token) return null;
   const tokenHash = await digest(token);
   const row = await env.DB.prepare("SELECT p.id,p.email,p.display_name,p.role FROM sessions s JOIN profiles p ON p.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?").bind(tokenHash, Math.floor(Date.now()/1000)).first<{id:string;email:string;display_name:string;role:string}>();
-  return row ?? null;
+  if (!row) return null;
+  const admin = await env.DB.prepare("SELECT role FROM store_admins WHERE email=? COLLATE NOCASE").bind(row.email).first<{role:string}>();
+  const legacyAdmin = (env.ADMIN_EMAILS??"").split(",").some(value=>value.trim().toLowerCase()===row.email.toLowerCase());
+  return {...row,role:admin||legacyAdmin||row.role==="admin"?"admin":"customer",isSuperAdmin:admin?.role==="super_admin"};
+
 }
 function authCookie(token: string, maxAge = AUTH_TTL) {
   return `${AUTH_COOKIE}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
@@ -118,9 +122,13 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
     if(adminEmails.includes(email)) await env.DB.prepare("UPDATE profiles SET role='admin',updated_at=CURRENT_TIMESTAMP WHERE email=?").bind(email).run();
     const profile=await env.DB.prepare("SELECT id,email,display_name,role FROM profiles WHERE email=?").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
     if(!profile) return json({error:"Account could not be created."},500);
+    const adminRecord=await env.DB.prepare("SELECT role FROM store_admins WHERE email=? COLLATE NOCASE").bind(email).first<{role:string}>();
+    const legacyAdmin=(env.ADMIN_EMAILS??"").split(",").some(value=>value.trim().toLowerCase()===email);
+    const sessionUser={...profile,role:adminRecord||legacyAdmin||profile.role==="admin"?"admin":"customer",isSuperAdmin:adminRecord?.role==="super_admin"};
+
     const token=crypto.randomUUID()+crypto.randomUUID(); const expires=Math.floor(Date.now()/1000)+AUTH_TTL;
     await env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)").bind(await digest(token),profile.id,expires,Math.floor(Date.now()/1000)).run();
-    return json({user:profile},200,{"Set-Cookie":authCookie(token)});
+    return json({user:sessionUser},200,{"Set-Cookie":authCookie(token)});
   }
   if (url.pathname === "/api/auth/logout" && method === "POST") {
     const token=cookieValue(request,AUTH_COOKIE); if(token) await env.DB.prepare("DELETE FROM sessions WHERE token_hash=?").bind(await digest(token)).run();
@@ -138,6 +146,31 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
   }
   if (url.pathname.startsWith("/api/admin/")) {
     if(!user || user.role!=="admin") return json({error:"Administrator access required."},403);
+    if(url.pathname==="/api/admin/administrators"){
+      if(!user.isSuperAdmin) return json({error:"Super administrator access required."},403);
+      if(method==="GET"){
+        const result=await env.DB.prepare("SELECT email,role,created_at FROM store_admins ORDER BY CASE role WHEN 'super_admin' THEN 0 ELSE 1 END,email").all();
+        return json({administrators:result.results});
+      }
+      if(method==="POST"){
+        const d=await body(); const email=typeof d.email==="string"?d.email.trim().toLowerCase():"";
+        if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254) return json({error:"Enter a valid administrator email address."},400);
+        if(email==="isfirewhat@gmail.com") return json({error:"The primary super administrator is already protected."},409);
+        await env.DB.prepare("INSERT INTO store_admins(email,role,created_by) VALUES(?,'admin',?) ON CONFLICT(email) DO UPDATE SET role=CASE WHEN store_admins.role='super_admin' THEN 'super_admin' ELSE 'admin' END").bind(email,user.email).run();
+        await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"granted","administrator",email).run();
+        return json({ok:true,email},201);
+      }
+      if(method==="DELETE"){
+        const d=await body(); const email=typeof d.email==="string"?d.email.trim().toLowerCase():"";
+        if(!email||email==="isfirewhat@gmail.com") return json({error:"The primary super administrator cannot be removed."},400);
+        const target=await env.DB.prepare("SELECT role FROM store_admins WHERE email=? COLLATE NOCASE").bind(email).first<{role:string}>();
+        if(!target) return json({error:"Administrator not found."},404);
+        if(target.role==="super_admin") return json({error:"Super administrator access cannot be removed here."},403);
+        await env.DB.prepare("DELETE FROM store_admins WHERE email=? COLLATE NOCASE AND role='admin'").bind(email).run();
+        await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"revoked","administrator",email).run();
+        return json({ok:true,email});
+      }
+    }
     if(url.pathname==="/api/admin/products" && method==="GET"){
       const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,stock,active,created_at,updated_at FROM products ORDER BY created_at DESC").all();
       return json({products:result.results});
