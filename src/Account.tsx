@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { apiFetch, requestEmailLink, signOut as supabaseSignOut } from "./supabase";
 import { ArrowRight, ArrowUpRight, Check, LogOut, Pencil, ShieldCheck, TicketPercent, UserRound } from "lucide-react";
 
 type User = { id: string; email: string; display_name: string; role: "customer" | "admin" | "super_admin" };
@@ -11,7 +12,7 @@ const blankProduct = () => ({name:"",description:"",category:"General",price:"",
 const blankCoupon = () => ({code:"",discountType:"percent",discountValue:"10",minimumOrder:"0",maxUses:"",expiresAt:""});
 
 async function request<T>(url:string, init?:RequestInit):Promise<T>{
-  const response=await fetch(url,{credentials:"same-origin",...init});
+  const response=await apiFetch(url,{credentials:"same-origin",...init});
   const data=await response.json() as T & {error?:string};
   if(!response.ok) throw new Error(data.error??"Something went wrong. Please try again.");
   return data;
@@ -20,9 +21,8 @@ async function request<T>(url:string, init?:RequestInit):Promise<T>{
 export default function AccountPage({ mode }: Props) {
   const [user,setUser]=useState<User|null>(null);
   const [email,setEmail]=useState("");
-  const [code,setCode]=useState("");
   const [displayName,setDisplayName]=useState("");
-  const [step,setStep]=useState<"email"|"code">("email");
+  const [step,setStep]=useState<"email"|"sent">("email");
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
   const [stats,setStats]=useState<Stats|null>(null);
@@ -55,20 +55,12 @@ export default function AccountPage({ mode }: Props) {
 
   async function requestCode(e:FormEvent){
     e.preventDefault();setBusy(true);setError("");
-    try{await request("/api/auth/request-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});setStep("code");}
+    try{const {error}=await requestEmailLink(email);if(error)throw error;setStep("sent");}
     catch(x){setError(x instanceof Error?x.message:"Could not send sign-in code.");}
     finally{setBusy(false);}
   }
-  async function verifyCode(e:FormEvent){
-    e.preventDefault();setBusy(true);setError("");
-    try{
-      await request("/api/auth/verify-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,code,name:displayName})});
-      window.location.assign("/profile");
-    }catch(x){setError(x instanceof Error?x.message:"That code could not be verified.");}
-    finally{setBusy(false);}
-  }
   async function signOut(){
-    await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});
+    await supabaseSignOut();
     window.location.assign("/");
   }
   async function saveProfile(e:FormEvent){
@@ -117,16 +109,16 @@ export default function AccountPage({ mode }: Props) {
     <h1 className="route-title">{mode==="admin"?<>Store <em>studio.</em></>:<>A little space <em>of your own.</em></>}</h1>
     {mode==="login"&&<div className="account-panel">
       <h2>{step==="email"?"Sign in or create an account":"Check your inbox"}</h2>
-      <p>{step==="email"?"Enter your email and we’ll send a one-time sign-in code. No password to remember.":"Your six-digit code is on its way to "+email+"."}</p>
+      <p>{step==="email"?"Enter your email and we’ll send you a secure sign-in link. No password to remember.":"A secure sign-in link has been sent to "+email+". Open it on this device to continue."}</p>
       {step==="email"?<form onSubmit={requestCode}>
         <label>Your name (optional)<input value={displayName} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="How should we greet you?"/></label>
         <label>Email address<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
         <button className="checkout-button" disabled={busy}>{busy?"Sending…":"Send sign-in code"} <ArrowRight size={16}/></button>
-      </form>:<form onSubmit={verifyCode}>
-        <label>Six-digit code<input inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} placeholder="000000"/></label>
-        <button className="checkout-button" disabled={busy}>{busy?"Verifying…":"Verify and continue"} <ArrowRight size={16}/></button>
+      </form>:<div className="email-link-sent">
+        <div className="profile-avatar"><Check/></div>
+        <p>We’ve sent a sign-in link to <strong>{email}</strong>. Open the email and follow the link to finish signing in.</p>
         <button type="button" className="back-link" onClick={()=>setStep("email")}>Use a different email</button>
-      </form>}
+      </div>}
       {error&&<p className="verification-error" role="alert">{error}</p>}
     </div>}
     {mode==="profile"&&(user?<div className="account-panel profile-panel">
