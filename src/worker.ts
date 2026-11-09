@@ -85,7 +85,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
   if (url.pathname === "/api/auth/me" && method === "GET") return json({user});
   if (url.pathname === "/api/auth/request-code" && method === "POST") {
     const data=await body(); const email=typeof data.email==="string"?data.email.trim().toLowerCase():"";
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length>254) return json({error:"Enter a valid email address."},400);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length>254) return json({error:"Enter a valid email address."},400);
     const recent=await env.DB.prepare("SELECT created_at FROM auth_codes WHERE email=?").bind(email).first<{created_at:number}>();
     if (recent && Date.now()/1000-recent.created_at<60) return json({error:"Please wait a minute before requesting another code."},429);
     const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0");
@@ -97,7 +97,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
   if (url.pathname === "/api/auth/verify-code" && method === "POST") {
     const data=await body(); const email=typeof data.email==="string"?data.email.trim().toLowerCase():""; const code=typeof data.code==="string"?data.code.trim():"";
     const record=await env.DB.prepare("SELECT code_hash,expires_at,attempts FROM auth_codes WHERE email=?").bind(email).first<{code_hash:string;expires_at:number;attempts:number}>();
-    if (!record || record.expires_at<Math.floor(Date.now()/1000) || record.attempts>=5 || !/^\\d{6}$/.test(code) || await digest(code+(env.SESSION_SECRET??env.TURNSTILE_SECRET_KEY))!==record.code_hash) {
+    if (!record || record.expires_at<Math.floor(Date.now()/1000) || record.attempts>=5 || !/^\d{6}$/.test(code) || await digest(code+(env.SESSION_SECRET??env.TURNSTILE_SECRET_KEY))!==record.code_hash) {
       if(record) await env.DB.prepare("UPDATE auth_codes SET attempts=attempts+1 WHERE email=?").bind(email).run();
       return json({error:"That code is invalid or expired. Request a fresh one and try again."},400);
     }
@@ -115,6 +115,12 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
   if (url.pathname === "/api/auth/logout" && method === "POST") {
     const token=cookieValue(request,AUTH_COOKIE); if(token) await env.DB.prepare("DELETE FROM sessions WHERE token_hash=?").bind(await digest(token)).run();
     return json({ok:true},200,{"Set-Cookie":authCookie("",0)});
+  }
+  if(url.pathname==="/api/profile" && method==="PUT"){
+    if(!user) return json({error:"Sign in to update your profile."},401);
+    const d=await body(); const displayName=typeof d.displayName==="string"?d.displayName.trim().slice(0,80):"";
+    await env.DB.prepare("UPDATE profiles SET display_name=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(displayName,user.id).run();
+    return json({user:{...user,display_name:displayName}});
   }
   if (url.pathname === "/api/products" && method === "GET") {
     const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,stock FROM products WHERE active=1 ORDER BY created_at DESC").all();
