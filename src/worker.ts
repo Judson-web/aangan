@@ -1,3 +1,13 @@
+interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  first<T = Record<string, unknown>>(): Promise<T | null>;
+  all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
+  run(): Promise<unknown>;
+}
+interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+  batch(statements: D1PreparedStatement[]): Promise<unknown>;
+}
 interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> };
   TURNSTILE_SECRET_KEY: string;
@@ -151,10 +161,9 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       return json({id,url:"/media/"+id},201);
     }
     if(url.pathname==="/api/admin/stats" && method==="GET"){
-      const [productsCount,customers,orders,coupons,activity]=await Promise.all([
+      const [productsCount,customers,coupons,activity]=await Promise.all([
         env.DB.prepare("SELECT COUNT(*) AS count FROM products WHERE active=1").first(),
         env.DB.prepare("SELECT COUNT(*) AS count FROM profiles WHERE role='customer'").first(),
-        env.DB.prepare("SELECT 0 AS count").first(),
         env.DB.prepare("SELECT COUNT(*) AS count FROM coupons WHERE active=1").first(),
         env.DB.prepare("SELECT action,entity_type,created_at FROM admin_events ORDER BY created_at DESC LIMIT 8").all()
       ]);
