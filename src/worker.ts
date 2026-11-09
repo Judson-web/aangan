@@ -175,6 +175,13 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"updated","product",id).run();
       return json({ok:true});
     }
+    if(url.pathname.startsWith("/api/admin/coupons/") && method==="PUT"){
+      const id=decodeURIComponent(url.pathname.split("/").pop()??"");
+      const d=await body();
+      await env.DB.prepare("UPDATE coupons SET active=?,discount_type=?,discount_value=?,min_order_value=?,max_uses=?,expires_at=? WHERE id=?").bind(d.active===false?0:1,d.discountType==="fixed"?"fixed":"percent",Math.max(1,Number(d.discountValue??1)),Math.max(0,Number(d.minimumOrder??0)),Number.isSafeInteger(Number(d.maxUses))?Number(d.maxUses):null,typeof d.expiresAt==="string"?d.expiresAt:null,id).run();
+      await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"updated","coupon",id).run();
+      return json({ok:true});
+    }
     if(url.pathname==="/api/admin/coupons" && method==="POST"){
       const d=await body(); const code=String(d.code??"").trim().toUpperCase(); const type=d.discountType==="fixed"?"fixed":"percent"; const value=Number(d.discountValue);
       if(!/^[A-Z0-9_-]{3,32}$/.test(code)||!Number.isSafeInteger(value)||value<=0||(type==="percent"&&value>100)) return json({error:"Enter a valid coupon and discount."},400);
