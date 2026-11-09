@@ -434,3 +434,102 @@ button,input,select,textarea{font-family:var(--sans)}
 
 .section-product-picker{border:1px solid var(--line);padding:14px;display:grid;gap:9px;max-height:220px;overflow:auto}.section-product-picker legend{font-size:10px;color:var(--muted);padding:0 6px}.section-product-picker label{display:flex;align-items:center;gap:9px;font-size:11px}.section-product-picker input{width:16px;min-height:16px}
 .admin-product-list article .coupon-toggle{border:1px solid var(--line);background:transparent;padding:8px 10px;font-size:9px}
+
+
+/* Thrilokha Shilpa: vermilion and ink catalogue system */
+:root{--paper:#f7f5f2;--cream:#ece8e3;--ink:#171515;--olive:#b51f2b;--muted:#716a68;--line:#ded7d3;--serif:"Instrument Serif",Georgia,serif;--accent:#c51f2d;--accent-dark:#941522;--black:#171515}
+html,body{background:var(--paper);color:var(--ink);overscroll-behavior-x:none}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.site-shell{overflow:clip}
+.announcement{background:var(--black);color:#fff;padding-inline:clamp(18px,5.5%,80px);letter-spacing:.17em}
+.site-header{background:#f7f5f2;border-bottom:1px solid #d8d0cc;padding-inline:clamp(16px,5.5%,80px)}
+.brand-word{color:var(--black);font-family:var(--serif);font-size:29px;letter-spacing:.025em}
+.brand-word i{color:var(--accent);font-style:normal}
+.brand-word small{color:#77706c;letter-spacing:.22em}
+.desktop-nav{gap:26px}.desktop-nav button{border:0;background:none;padding:10px 0;font-size:10px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}.desktop-nav button:hover{color:var(--accent)}
+.icon-button:hover,.bag-trigger:hover{color:var(--accent)}
+.bag-trigger b{background:var(--accent);color:white}
+.catalogue-intro{padding-top:clamp(45px,7vw,90px);padding-bottom:clamp(35px,5vw,65px);display:flex;align-items:flex-end;justify-content:space-between;gap:24px;background:#f7f5f2}
+.catalogue-intro .eyebrow{color:var(--accent);margin-bottom:17px}
+.catalogue-intro h1{font:400 clamp(46px,7vw,86px)/.98 var(--serif);letter-spacing:-.025em;margin:0;color:var(--black)}
+.catalogue-intro h1 em{color:var(--accent);font-weight:400}
+.catalogue-intro>div>p:last-child{font-size:13px;line-height:1.8;color:#6f6763;margin:17px 0 0}
+.catalogue-all-link{display:flex;align-items:center;gap:12px;white-space:nowrap;background:var(--black);color:white;border:1px solid var(--black);padding:14px 18px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.catalogue-all-link:hover{background:var(--accent);border-color:var(--accent)}
+.catalogue-section{padding-top:clamp(42px,5.5vw,72px);padding-bottom:clamp(48px,6vw,82px);background:#f7f5f2}
+.catalogue-section:nth-of-type(even){background:#eeeae6}
+.catalogue-section .eyebrow{color:var(--accent);margin-bottom:12px}
+.catalogue-section .section-heading h2{font-size:clamp(34px,4vw,51px);color:var(--black)}
+.catalogue-section .section-heading p:not(.eyebrow){color:#746b67}
+.catalogue-section .text-link{border:0;background:none;color:var(--accent);font-size:10px;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:9px;cursor:pointer}
+.product-grid.horizontal-product-row{display:flex;flex-wrap:nowrap;gap:18px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-padding-inline:2px;padding:0 2px 16px;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--accent) #ded7d3}
+.horizontal-product-row .product-card{flex:0 0 clamp(220px,24vw,310px);min-width:0;scroll-snap-align:start}
+.horizontal-product-row .product-image-wrap{aspect-ratio:4/5;background:#e8e2de;overflow:hidden}
+.horizontal-product-row .product-image-wrap img{width:100%;height:100%;object-fit:cover}
+.horizontal-product-row::-webkit-scrollbar{height:5px}
+.horizontal-product-row::-webkit-scrollbar-track{background:#ded7d3}
+.horizontal-product-row::-webkit-scrollbar-thumb{background:var(--accent)}
+.product-card{min-width:0}
+.product-image-wrap{background:#e8e2de}
+.product-name{color:var(--black);font-family:var(--serif);font-size:22px}
+.product-meta{color:#766c68;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.price-line strong{color:var(--black)}
+.wish-button{background:#f7f5f2;color:var(--black)}
+.wish-button:hover{background:var(--accent);color:white}
+.quick-add{background:var(--black);color:white}.quick-add:hover{background:var(--accent)}
+.primary-link,.checkout-button{background:var(--accent);color:white;border:1px solid var(--accent);letter-spacing:.12em;text-transform:uppercase}
+.primary-link:hover,.checkout-button:hover{background:var(--black);border-color:var(--black)}
+.text-link{color:var(--accent)}
+.site-footer{background:var(--black);color:#f7f5f2}
+.site-footer .brand-word{color:#f7f5f2}.site-footer .brand-word i{color:#ef4853}
+.footer-links button{color:#f7f5f2}
+.account-page,.admin-page{background:#eeeae6}
+.account-panel,.admin-form,.admin-list-section,.admin-stats article{background:#fbf9f7;border-color:#ddd5d0}
+.admin-stats strong{color:var(--accent)}.admin-notice{background:#f4e1e2;color:#761823}
+.legal-page{background:#f7f5f2}
+.empty-results{background:#eeeae6;border-color:#ded7d3}
+.drawer-overlay{position:fixed;inset:0;z-index:30;background:#100d0dcc;display:flex;justify-content:flex-start;backdrop-filter:blur(4px)}
+.drawer{width:min(430px,92vw);height:100%;overflow-y:auto;background:#f7f5f2;color:var(--black);padding:25px clamp(22px,5vw,38px) 24px;display:flex;flex-direction:column;box-shadow:18px 0 60px #0003;animation:drawer-in .24s ease-out}
+@keyframes drawer-in{from{transform:translateX(-22px);opacity:.7}to{transform:translateX(0);opacity:1}}
+.drawer-top{display:flex;align-items:center;justify-content:space-between;padding-bottom:23px;border-bottom:1px solid var(--line)}
+.drawer-top .brand-word{font-size:24px}
+.drawer-close{width:40px;height:40px;border:1px solid var(--line);border-radius:50%;background:transparent;display:grid;place-items:center;cursor:pointer}
+.drawer-close:hover{background:var(--black);color:white}
+.drawer-feature{margin:27px 0 25px;padding:25px 23px;background:var(--black);color:white;position:relative;overflow:hidden}
+.drawer-feature:after{content:"";position:absolute;width:180px;height:180px;border:1px solid #ffffff25;border-radius:50%;right:-75px;bottom:-95px;box-shadow:0 0 0 18px #ffffff08,0 0 0 38px #ffffff06}
+.drawer-feature span,.drawer-feature small{display:block;font-size:8px;letter-spacing:.2em;color:#f36a70}
+.drawer-feature strong{display:block;font:400 39px/.98 var(--serif);margin:17px 0}
+.drawer-feature strong em{color:#ef4853;font-weight:400}
+.drawer-feature small{color:#d5ceca}
+.drawer-nav{display:grid;gap:0}
+.drawer-label{font-size:8px;letter-spacing:.2em;color:var(--accent);font-weight:700;margin:18px 0 8px}
+.drawer-nav button{width:100%;display:flex;justify-content:space-between;align-items:center;border:0;border-bottom:1px solid var(--line);background:transparent;padding:15px 2px;text-align:left;font:400 21px var(--serif);cursor:pointer}
+.drawer-nav button svg{color:var(--accent);stroke-width:1.5}
+.drawer-nav button:hover{color:var(--accent);padding-left:7px}
+.drawer-bottom{display:flex;gap:22px;margin-top:auto;padding-top:24px}
+.drawer-bottom button{border:0;background:none;padding:5px 0;color:#746b67;font-size:9px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.drawer-bottom button:hover{color:var(--accent)}
+.search-bar{background:#fff;top:120px;border:1px solid var(--line)}
+@media(max-width:720px){
+ .site-header{height:72px;grid-template-columns:42px 1fr auto;gap:5px}
+ .mobile-menu{display:grid;grid-column:1;grid-row:1}
+ .desktop-nav{display:none}
+ .site-header>.brand{grid-column:2;justify-self:center}
+ .site-header>.brand .brand-word{font-size:21px}
+ .site-header>.brand .brand-word small{font-size:6px}
+ .header-actions{grid-column:3;gap:5px}
+ .header-actions .icon-button{padding:6px}
+ .header-actions .icon-button:nth-child(2){display:none}
+ .bag-trigger{gap:4px}.bag-trigger span{display:none}
+ .catalogue-intro{align-items:flex-start;flex-direction:column;padding:43px 22px 32px}
+ .catalogue-intro h1{font-size:54px}
+ .catalogue-all-link{padding:12px 15px}
+ .catalogue-section{padding-left:22px;padding-right:0}
+ .catalogue-section .section-heading{padding-right:22px;align-items:flex-end}
+ .catalogue-section .section-heading h2{font-size:36px}
+ .horizontal-product-row .product-card{flex-basis:72vw;max-width:290px}
+ .horizontal-product-row{padding-right:22px}
+ .drawer{width:min(390px,92vw)}
+}
+@media(min-width:721px){.catalogue-section .horizontal-product-row{margin-right:-1px}}
+
