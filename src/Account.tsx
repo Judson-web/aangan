@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { apiFetch, requestEmailLink, signOut as supabaseSignOut } from "./supabase";
-import { ArrowRight, ArrowUpRight, Check, LogOut, Pencil, ShieldCheck, TicketPercent, UserRound } from "lucide-react";
+import { apiFetch, supabase, signInWithPassword, signUpWithPassword, requestEmailLink, requestPasswordReset, updatePassword, signOut as supabaseSignOut } from "./supabase";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Eye, EyeOff, KeyRound, LogOut, Mail, Pencil, ShieldCheck, TicketPercent, UserRound } from "lucide-react";
 
 type User = { id: string; email: string; display_name: string; avatar_url?: string; role: "customer" | "admin" | "super_admin" };
 type Product = { id:string; name:string; description:string; category:string; price:number; compare_at_price:number|null; image_url:string; stock:number; active:number };
@@ -23,7 +23,18 @@ export default function AccountPage({ mode }: Props) {
   const [user,setUser]=useState<User|null>(null);
   const [email,setEmail]=useState("");
   const [displayName,setDisplayName]=useState("");
-  const [step,setStep]=useState<"email"|"sent">("email");
+  const [authTab,setAuthTab]=useState<"signin"|"signup">("signin");
+  const [authMethod,setAuthMethod]=useState<"password"|"link">("password");
+  const [step,setStep]=useState<"form"|"sent"|"reset-sent">("form");
+  const [sentMessage,setSentMessage]=useState("");
+  const [password,setPassword]=useState("");
+  const [confirmPassword,setConfirmPassword]=useState("");
+  const [newPassword,setNewPassword]=useState("");
+  const [confirmNewPassword,setConfirmNewPassword]=useState("");
+  const [showPassword,setShowPassword]=useState(false);
+  const [showNewPassword,setShowNewPassword]=useState(false);
+  const [recovery,setRecovery]=useState(false);
+  const [authLoading,setAuthLoading]=useState(true);
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
   const [stats,setStats]=useState<Stats|null>(null);
@@ -50,7 +61,27 @@ export default function AccountPage({ mode }: Props) {
     setStats(s);setProducts(p.products??[]);setCoupons(c.coupons??[]);setSections(sectionData.sections??[]);
     if(user?.role==="super_admin"){const adminData=await request<{admins:AdminAccount[]}>("/api/admin/admins");setAdmins(adminData.admins??[]);}
   },[user?.role]);
-  useEffect(()=>{request<{user:User|null}>("/api/auth/me").then(d=>{setUser(d.user);setDisplayName(d.user?.display_name??"");}).catch(()=>setUser(null));},[]);
+  useEffect(()=>{
+    let alive=true;
+    const authFragment=new URLSearchParams(window.location.hash.replace(/^#/,""));
+    const authQuery=new URLSearchParams(window.location.search);
+    if(authFragment.get("type")==="recovery"||authQuery.get("type")==="recovery")setRecovery(true);
+    const refreshUser=async()=>{
+      try{
+        const d=await request<{user:User|null}>("/api/auth/me");
+        if(alive){setUser(d.user);setDisplayName(d.user?.display_name??"");}
+      }catch{if(alive)setUser(null);}
+      finally{if(alive)setAuthLoading(false);}
+    };
+    void refreshUser();
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((event)=>{
+      if(event==="PASSWORD_RECOVERY"&&alive)setRecovery(true);
+      // Supabase holds its auth lock while notifying listeners. Defer API work until
+      // the callback returns so apiFetch can safely read the updated session.
+      window.setTimeout(()=>{if(alive)void refreshUser();},0);
+    });
+    return()=>{alive=false;subscription.unsubscribe();};
+  },[]);
   useEffect(()=>{
     if(mode!=="admin"||!(["admin","super_admin"] as const).includes(user?.role as "admin"|"super_admin"))return;
     let alive=true;
@@ -62,12 +93,67 @@ export default function AccountPage({ mode }: Props) {
 
   async function requestCode(e:FormEvent){
     e.preventDefault();setBusy(true);setError("");
-    try{const {error}=await requestEmailLink(email, displayName);if(error)throw error;setStep("sent");}
-    catch(x){setError(x instanceof Error?x.message:"Could not send sign-in code.");}
+    try{
+      if(!email.trim())throw new Error("Enter your email address to continue.");
+      if(authTab==="signup"){
+        if(displayName.trim().length<2)throw new Error("Please enter your name.");
+        if(password.length<8)throw new Error("Use a password with at least 8 characters.");
+        if(password!==confirmPassword)throw new Error("Your passwords do not match.");
+        const {data,error}=await signUpWithPassword(email,password,displayName);
+        if(error)throw error;
+        if(data.session){window.location.assign("/profile");return;}
+        setSentMessage("Your account is nearly ready. Confirm your email using the message we just sent, then return here to sign in.");
+        setStep("sent");
+        return;
+      }
+      if(authMethod==="link"){
+        const {error}=await requestEmailLink(email,false);
+        if(error)throw error;
+        setSentMessage("A secure sign-in link is on its way. Open it on this device to finish signing in.");
+        setStep("sent");
+        return;
+      }
+      const {error}=await signInWithPassword(email,password);
+      if(error)throw error;
+      window.location.assign("/profile");
+    }catch(x){
+      const message=x instanceof Error?x.message:"We couldn't complete that request. Please try again.";
+      if(/invalid login credentials/i.test(message))setError("That email and password don't match. Check them or reset your password.");
+      else if(/email not confirmed/i.test(message))setError("Your email still needs confirming. Open the confirmation message we sent, or request a new sign-in link.");
+      else if(/already registered|user already exists/i.test(message))setError("An account with this email already exists. Switch to sign in instead.");
+      else setError(message);
+    }finally{setBusy(false);}
+  }
+  async function sendPasswordReset(){
+    setError("");
+    if(!email.trim()){setError("Enter your email address first, then choose forgot password.");return;}
+    setBusy(true);
+    try{
+      const {error}=await requestPasswordReset(email);
+      if(error)throw error;
+      setSentMessage("We've sent a password reset link to your email address. Open it on this device to choose a new password.");
+      setStep("reset-sent");
+    }catch(x){setError(x instanceof Error?x.message:"We couldn't send the reset link. Please try again.");}
+    finally{setBusy(false);}
+  }
+  async function saveNewPassword(e:FormEvent){
+    e.preventDefault();setError("");setNotice("");
+    if(newPassword.length<8){setError("Use a password with at least 8 characters.");return;}
+    if(newPassword!==confirmNewPassword){setError("Your passwords do not match.");return;}
+    setBusy(true);
+    try{
+      const {error}=await updatePassword(newPassword);
+      if(error)throw error;
+      setRecovery(false);setNewPassword("");setConfirmNewPassword("");
+      window.history.replaceState({}, "", "/profile");
+      setNotice("Your password has been updated.");
+    }catch(x){setError(x instanceof Error?x.message:"We couldn't update your password. Please request a fresh reset link.");}
     finally{setBusy(false);}
   }
   async function signOut(){
-    await supabaseSignOut();
+    setBusy(true);setNotice("");
+    const {error}=await supabaseSignOut();
+    if(error){setBusy(false);setNotice("We couldn't sign you out. Please try again.");return;}
     window.location.assign("/");
   }
   async function saveProfile(e:FormEvent){
@@ -121,29 +207,90 @@ export default function AccountPage({ mode }: Props) {
   return <section className="account-page section-pad route-section">
     <p className="eyebrow">THRILOKHA SHILPA · {mode==="admin"?"PRIVATE STORE STUDIO":"YOUR ACCOUNT"}</p>
     <h1 className="route-title">{mode==="admin"?<>Store <em>studio.</em></>:<>A little space <em>of your own.</em></>}</h1>
-    {mode==="login"&&<div className="account-panel">
-      <h2>{step==="email"?"Sign in or create an account":"Check your inbox"}</h2>
-      <p>{step==="email"?"Enter your email and we’ll send you a secure sign-in link. No password to remember.":"A secure sign-in link has been sent to "+email+". Open it on this device to continue."}</p>
-      {step==="email"?<form onSubmit={requestCode}>
-        <label>Your name (optional)<input value={displayName} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="How should we greet you?"/></label>
-        <label>Email address<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
-        <button className="checkout-button" disabled={busy}>{busy?"Sending…":"Send sign-in code"} <ArrowRight size={16}/></button>
-      </form>:<div className="email-link-sent">
-        <div className="profile-avatar"><Check/></div>
-        <p>We’ve sent a sign-in link to <strong>{email}</strong>. Open the email and follow the link to finish signing in.</p>
-        <button type="button" className="back-link" onClick={()=>setStep("email")}>Use a different email</button>
-      </div>}
+    {mode==="login"&&<div className="auth-layout">
+      <aside className="auth-editorial">
+        <div className="auth-art-frame"><img src="/thrilokha-artwork.svg" alt="Thrilokha Shilpa ornamental artwork"/></div>
+        <p className="eyebrow">THRILOKHA SHILPA · YOUR SPACE</p>
+        <h2>Good things begin with <em>the little details.</em></h2>
+        <p>Keep your favourite pieces close, follow your selections and make the store feel a little more like yours.</p>
+        <div className="auth-editorial-note"><span/> A considered space for everyday living</div>
+      </aside>
+      <div className="account-panel auth-card">
+        {authLoading?<div className="auth-loading">Checking your account…</div>:user?<div className="auth-logged-in">
+          <div className="auth-success-mark"><Check/></div>
+          <p className="eyebrow">YOU'RE SIGNED IN</p>
+          <h2>Welcome back.</h2>
+          <p>Your account is ready. Continue to your profile and saved pieces.</p>
+          <a className="checkout-button" href="/profile">Continue to profile <ArrowRight size={16}/></a>
+        </div>:<>
+          <div className="auth-heading">
+            <p className="eyebrow">A MORE PERSONAL EXPERIENCE</p>
+            <h2>{step==="reset-sent"?"Check your email":step==="sent"?"You're nearly there":authTab==="signup"?"Create your account":"Welcome back"}</h2>
+            <p>{step!=="form"?sentMessage:authTab==="signup"?"A few details and you'll have your own space at Thrilokha Shilpa.":"Sign in to keep your bag and saved pieces together."}</p>
+          </div>
+          {step==="form"?<>
+            <div className="auth-tabs" role="tablist" aria-label="Account access">
+              <button type="button" role="tab" aria-selected={authTab==="signin"} className={authTab==="signin"?"active":""} onClick={()=>{setAuthTab("signin");setAuthMethod("password");setError("");}}>Sign in</button>
+              <button type="button" role="tab" aria-selected={authTab==="signup"} className={authTab==="signup"?"active":""} onClick={()=>{setAuthTab("signup");setAuthMethod("password");setError("");}}>Create account</button>
+            </div>
+            <form className="auth-form" onSubmit={requestCode}>
+              {authTab==="signup"&&<label>Your name
+                <input autoComplete="name" required minLength={2} maxLength={80} value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Your name"/>
+              </label>}
+              <label>Email address
+                <input type="email" inputMode="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/>
+              </label>
+              {authMethod==="password"&&<>
+                <label>Password
+                  <span className="auth-password-wrap"><input type={showPassword?"text":"password"} autoComplete={authTab==="signup"?"new-password":"current-password"} required minLength={authTab==="signup"?8:undefined} value={password} onChange={e=>setPassword(e.target.value)} placeholder={authTab==="signup"?"At least 8 characters":"Your password"}/><button type="button" onClick={()=>setShowPassword(x=>!x)} aria-label={showPassword?"Hide password":"Show password"}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></span>
+                </label>
+                {authTab==="signup"&&<label>Confirm password
+                  <span className="auth-password-wrap"><input type={showPassword?"text":"password"} autoComplete="new-password" required minLength={8} value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder="Enter your password again"/></span>
+                </label>}
+              </>}
+              {authTab==="signin"&&authMethod==="password"&&<div className="auth-form-utility"><button type="button" className="auth-text-button" onClick={()=>void sendPasswordReset()} disabled={busy}>Forgot password?</button></div>}
+              <button className="checkout-button auth-submit" disabled={busy}>{busy?"Please wait…":authTab==="signup"?"Create account":authMethod==="link"?"Email me a sign-in link":"Sign in"} <ArrowRight size={16}/></button>
+            </form>
+            {authTab==="signin"&&<div className="auth-alternative">
+              <span>OR</span>
+              <button type="button" onClick={()=>{setAuthMethod(x=>x==="password"?"link":"password");setPassword("");setError("");}}><Mail size={16}/>{authMethod==="password"?"Use a secure email link instead":"Use password instead"}</button>
+            </div>}
+            <p className="auth-legal">By continuing, you agree to our <a href="/terms">Terms</a> and acknowledge our <a href="/privacy">Privacy Policy</a>.</p>
+          </>:<div className="auth-sent-state">
+            <div className="auth-success-mark">{step==="reset-sent"?<KeyRound/>:<Mail/>}</div>
+            <p className="auth-sent-address">{email}</p>
+            <p>{sentMessage}</p>
+            <button type="button" className="back-link" onClick={()=>{setStep("form");setError("");setPassword("");}}> <ArrowLeft size={15}/> Back to sign in</button>
+          </div>}
+          {error&&<p className="verification-error auth-error" role="alert">{error}</p>}
+        </>}
+      </div>
+    </div>}
+    {mode==="profile"&&recovery&&<div className="account-panel auth-recovery">
+      <p className="eyebrow">ACCOUNT SECURITY</p>
+      <h2>Choose a new password</h2>
+      <p>Use a fresh password to secure your account. It should be at least 8 characters long.</p>
+      <form className="auth-form" onSubmit={saveNewPassword}>
+        <label>New password
+          <span className="auth-password-wrap"><input type={showNewPassword?"text":"password"} autoComplete="new-password" minLength={8} required value={newPassword} onChange={e=>setNewPassword(e.target.value)} placeholder="At least 8 characters"/><button type="button" aria-label={showNewPassword?"Hide password":"Show password"} onClick={()=>setShowNewPassword(x=>!x)}>{showNewPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></span>
+        </label>
+        <label>Confirm new password
+          <input type={showNewPassword?"text":"password"} autoComplete="new-password" minLength={8} required value={confirmNewPassword} onChange={e=>setConfirmNewPassword(e.target.value)} placeholder="Enter it again"/>
+        </label>
+        <button className="checkout-button" disabled={busy}>{busy?"Updating…":"Update password"} <Check size={16}/></button>
+      </form>
       {error&&<p className="verification-error" role="alert">{error}</p>}
     </div>}
-    {mode==="profile"&&(user?<div className="account-panel profile-panel">
+        {mode==="profile"&&!recovery&&(authLoading?<div className="account-panel auth-loading">Loading your account…</div>:user?<div className="account-panel profile-panel">
       <div className="profile-avatar">{user.avatar_url?<img src={user.avatar_url} alt="Profile"/>:<UserRound/>}</div><h2>{user.display_name||"Welcome back"}</h2><p>{user.email}</p>
       <span className="account-role">{user.role==="super_admin"?"Super administrator":user.role==="admin"?"Administrator":"Customer account"}</span>
-      <form className="profile-edit-form" onSubmit={saveProfile}><label>Profile photograph<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>void uploadProfileImage(e.target.files?.[0])}/></label><label>Your display name<input value={displayName||user.display_name} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="Your name"/></label><button className="checkout-button" disabled={busy}>Save profile <Check size={16}/></button></form>
+      <form className="profile-edit-form" onSubmit={saveProfile}><label>Profile photograph<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>void uploadProfileImage(e.target.files?.[0])}/></label><label>Your display name<input value={displayName} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="Your name"/></label><button className="checkout-button" disabled={busy}>Save profile <Check size={16}/></button></form>
       <div className="account-links"><a href="/bag">Shopping bag <ArrowRight size={16}/></a><a href="/wishlist">Saved pieces <ArrowRight size={16}/></a>{(user.role==="admin"||user.role==="super_admin")&&<a href="/admin">Store administration <ArrowUpRight size={16}/></a>}</div>
       <button className="back-link" onClick={signOut}><LogOut size={15}/> Sign out</button>
       {notice&&<p className="admin-notice" role="status">{notice}</p>}
     </div>:<div className="account-panel"><h2>Welcome to your account</h2><p>Sign in to keep your bag and saved pieces with you across devices.</p><a className="checkout-button" href="/login">Sign in or create account <ArrowRight size={16}/></a></div>)}
-    {mode==="admin"&&((user?.role==="admin"||user?.role==="super_admin")?<>
+    {mode==="admin"&&authLoading&&<div className="account-panel auth-loading">Verifying store access…</div>}
+    {mode==="admin"&&!authLoading&&((user?.role==="admin"||user?.role==="super_admin")?<>
       <div className="admin-stats">{[
         ["Live products",stats?.products??"…"],["Customer accounts",stats?.customers??"…"],["Orders",stats?.paymentsEnabled?stats.orders:"Not live"],["Active coupons",stats?.activeCoupons??"…"]
       ].map(([label,value])=><article key={String(label)}><small>{String(label)}</small><strong>{String(value)}</strong></article>)}</div>
