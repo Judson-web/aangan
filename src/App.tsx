@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { categories, formatPrice, type Category, type Product } from "./catalog";
 import AccountPage from "./Account";
+import { apiFetch } from "./supabase";
 
 type CartLine = { productId: string; quantity: number };
 type SortOption = "featured" | "price-low" | "price-high" | "name";
@@ -58,7 +59,7 @@ function TurnstileGate({ onVerified }: { onVerified: () => void }) {
         callback: async (token) => {
           setError("");
           try {
-            const response = await fetch("/api/verify-human", {
+            const response = await apiFetch("/api/verify-human", {
               method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ token }),
             });
@@ -143,10 +144,10 @@ function App() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
-  useEffect(() => { fetch("/api/products").then(r=>r.json()).then((d:{products?:Array<{id:string;name:string;description:string;category:string;price:number;compare_at_price:number|null;image_url:string}>})=>setCatalogue((d.products??[]).map(p=>({id:p.id,name:p.name,maker:"THRILOKHA SHILPA",category:(["Home","Wear","Jewellery","Art"].includes(p.category)?p.category:"Art") as Exclude<Category,"All">,price:p.price,oldPrice:p.compare_at_price??undefined,image:p.image_url,badge:undefined,description:p.description,material:"See product details",origin:"India"})))).catch(()=>setCatalogue([])); }, []);
+  useEffect(() => { apiFetch("/api/products").then(r=>r.json()).then((d:{products?:Array<{id:string;name:string;description:string;category:string;price:number;compare_at_price:number|null;image_url:string}>})=>setCatalogue((d.products??[]).map(p=>({id:p.id,name:p.name,maker:"THRILOKHA SHILPA",category:(["Home","Wear","Jewellery","Art"].includes(p.category)?p.category:"Art") as Exclude<Category,"All">,price:p.price,oldPrice:p.compare_at_price??undefined,image:p.image_url,badge:undefined,description:p.description,material:"See product details",origin:"India"})))).catch(()=>setCatalogue([])); }, []);
   useEffect(() => {
     let alive = true;
-    fetch("/api/human-status", { credentials: "same-origin" })
+    apiFetch("/api/human-status", { credentials: "same-origin" })
       .then((response) => response.json() as Promise<{ verified?: boolean }>)
       .then((result) => { if (alive) setVerified(Boolean(result.verified)); })
       .catch(() => { if (alive) setVerified(false); })
@@ -159,12 +160,12 @@ function App() {
     let alive = true;
     const hydrate = async () => {
       try {
-        const me = await fetch("/api/auth/me", { credentials: "same-origin" }).then(r => r.json()) as { user?: unknown };
+        const me = await apiFetch("/api/auth/me", { credentials: "same-origin" }).then(r => r.json()) as { user?: unknown };
         if (!alive) return;
         if (me.user) {
           const [remoteCart, remoteWishlist] = await Promise.all([
-            fetch("/api/cart", { credentials: "same-origin" }).then(r => r.json()) as Promise<{items?:CartLine[]}>,
-            fetch("/api/wishlist", { credentials: "same-origin" }).then(r => r.json()) as Promise<{items?:Array<{productId:string}>}>,
+            apiFetch("/api/cart", { credentials: "same-origin" }).then(r => r.json()) as Promise<{items?:CartLine[]}>,
+            apiFetch("/api/wishlist", { credentials: "same-origin" }).then(r => r.json()) as Promise<{items?:Array<{productId:string}>}>,
           ]);
           if (!alive) return;
           const localCart = readStored<CartLine[]>(CART_KEY, []);
@@ -182,11 +183,11 @@ function App() {
   }, []);
   useEffect(() => {
     if (!cloudUser || !cloudReady) return;
-    void fetch("/api/cart", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: cart }) });
+    void apiFetch("/api/cart", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: cart }) });
   }, [cart, cloudUser, cloudReady]);
   useEffect(() => {
     if (!cloudUser || !cloudReady) return;
-    void fetch("/api/wishlist", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: wishlist }) });
+    void apiFetch("/api/wishlist", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: wishlist }) });
   }, [wishlist, cloudUser, cloudReady]);
   useEffect(() => {
     if (!menuOpen) return;
