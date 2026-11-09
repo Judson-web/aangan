@@ -52,7 +52,7 @@ export async function signUpWithPassword(email: string, password: string, fullNa
   });
 }
 
-export async function requestEmailLink(email: string, _displayName = "", shouldCreateUser = false) {
+export async function requestEmailLink(email: string, shouldCreateUser = false) {
   return supabase.auth.signInWithOtp({
     email: normalizedEmail(email),
     options: {
