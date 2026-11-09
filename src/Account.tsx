@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ArrowRight, ArrowUpRight, Check, ImagePlus, LogOut, Package, Pencil, ShieldCheck, TicketPercent, UserRound, Users } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, LogOut, Pencil, ShieldCheck, TicketPercent, UserRound } from "lucide-react";
 
 type User = { id: string; email: string; display_name: string; role: "customer" | "admin" };
 type Product = { id:string; name:string; description:string; category:string; price:number; compare_at_price:number|null; image_url:string; stock:number; active:number };
@@ -176,4 +176,3 @@ export default function AccountPage({ mode }: Props) {
   </section>;
 }
 
-function ShoppingBagIcon(){return <Package/>;}
