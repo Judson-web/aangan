@@ -307,3 +307,34 @@
  .footer-top{display:block}.footer-links{display:grid;grid-template-columns:repeat(2,1fr);gap:25px 15px;margin-top:28px}.footer-links>div{gap:10px}.footer-bottom{font-size:7px}.footer-bottom span:nth-child(2){display:none}
  .verification-card{padding:30px 18px}.verification-card h1{font-size:37px}.turnstile-slot{overflow:hidden}
 }
+
+
+.account-trigger{display:grid!important}
+.account-page{min-height:58vh;padding-top:78px;padding-bottom:100px;background:#f0ede4}
+.account-page>.eyebrow{margin-bottom:16px}
+.account-page .route-title{font:500 clamp(42px,5vw,68px)/1.1 var(--serif);letter-spacing:-2px;color:var(--ink);margin:0 0 35px}
+.account-page .route-title em{color:var(--olive)}
+.account-panel{width:min(540px,100%);margin:0 auto;background:#fbf9f3;border:1px solid var(--line);padding:clamp(25px,5vw,48px);box-shadow:0 18px 55px #292b240c}
+.account-panel h2,.admin-form h2{font:500 30px/1.15 var(--serif);margin:0 0 12px}
+.account-panel>p{font-size:12px;line-height:1.8;color:var(--muted);margin:0 0 24px}
+.account-panel form,.admin-form{display:grid;gap:17px}
+.account-panel label,.admin-form label{display:grid;gap:8px;font-size:10px;letter-spacing:.04em;color:#67695c}
+.account-panel input,.admin-form input,.admin-form textarea,.admin-form select{width:100%;min-height:45px;padding:11px 12px;border:1px solid var(--line);background:#fffdf8;color:var(--ink);font:12px "DM Sans",sans-serif;border-radius:0}
+.admin-form textarea{min-height:90px;resize:vertical}
+.account-panel .checkout-button,.admin-form .checkout-button{display:flex;text-decoration:none}
+.profile-avatar{width:54px;height:54px;display:grid;place-items:center;background:#e7e3d7;color:var(--olive);border-radius:50%;margin-bottom:19px}
+.account-role{display:inline-block;margin:4px 0 22px;padding:7px 10px;background:#e8e8dd;color:#596047;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.account-links{display:grid;border-top:1px solid var(--line);margin:12px 0 20px}
+.account-links a{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--line);font-size:11px;text-decoration:none;color:var(--ink)}
+.account-panel .back-link{border:0;background:none;padding:10px 0;color:var(--muted);font-size:11px;cursor:pointer}
+.admin-page{background:#f0ede4}
+.admin-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:32px}
+.admin-stats article{background:#fbf9f3;border:1px solid var(--line);padding:20px;display:grid;gap:10px}
+.admin-stats small{font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.admin-stats strong{font:500 32px var(--serif);color:var(--olive)}
+.admin-forms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.admin-form{background:#fbf9f3;border:1px solid var(--line);padding:clamp(20px,3vw,32px)}
+.admin-form .eyebrow{margin-bottom:0}
+.form-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.admin-notice{padding:15px;background:#e7e8dc;color:#4c563b;font-size:11px}
+@media(max-width:720px){.admin-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-forms{grid-template-columns:1fr}.account-page{padding-top:55px;padding-bottom:80px}.account-page .route-title{font-size:43px}.form-two{grid-template-columns:1fr 1fr}}
