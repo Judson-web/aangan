@@ -12,10 +12,6 @@ interface Env {
   ASSETS: { fetch: (request: Request) => Promise<Response> };
   TURNSTILE_SECRET_KEY: string;
   DB: D1Database;
-  RESEND_API_KEY?: string;
-  AUTH_FROM_EMAIL?: string;
-  SESSION_SECRET?: string;
-  ADMIN_EMAILS?: string;
   SUPABASE_URL?: string;
   SUPABASE_PUBLISHABLE_KEY?: string;
 }
