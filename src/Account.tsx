@@ -95,7 +95,7 @@ export default function AccountPage({ mode }: Props) {
     }catch(x){setNotice(x instanceof Error?x.message:"Could not save product.");}
   }
   async function toggleCoupon(item:Coupon){
-    try{await request("/api/admin/coupons/"+encodeURIComponent(item.id),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...item,active:!item.active,minimumOrder:item.min_order_value,maxUses:item.max_uses})});setNotice(item.active?"Coupon paused.":"Coupon activated.");await loadAdmin();}
+    try{await request("/api/admin/coupons/"+encodeURIComponent(item.id),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...item,active:!item.active,discountType:item.discount_type,discountValue:item.discount_value,minimumOrder:item.min_order_value,maxUses:item.max_uses,expiresAt:item.expires_at})});setNotice(item.active?"Coupon paused.":"Coupon activated.");await loadAdmin();}
     catch(x){setNotice(x instanceof Error?x.message:"Could not update coupon.");}
   }
   async function saveCoupon(e:FormEvent){
