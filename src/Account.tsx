@@ -137,7 +137,7 @@ export default function AccountPage({ mode }: Props) {
     e.preventDefault();setBusy(true);setError("");
     try{
       const token=emailCode.replace(/\s/g,"");
-      if(!/^\\d{6}$/.test(token))throw new Error("Enter the six-digit code from your email.");
+      if(!/^\d{6}$/.test(token))throw new Error("Enter the six-digit code from your email.");
       const {error}=await verifyEmailCode(email,token);
       if(error)throw error;
       window.location.assign("/profile");
