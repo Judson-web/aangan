@@ -408,3 +408,26 @@
 .artwork-feature{display:flex;align-items:center;justify-content:space-between;gap:30px;padding:65px 8%;background:#e8e4d9}
 .artwork-feature>img{width:min(210px,28vw);height:auto;max-height:230px;object-fit:contain}
 @media(max-width:720px){.art-story{padding-top:55px;padding-bottom:65px}.art-story-grid{grid-template-columns:1fr;gap:28px}.artwork-feature{padding:45px 7%;}.artwork-feature>img{width:100px}}
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+:root{--paper:#f4f0e7;--cream:#e9e1d1;--ink:#25251f;--olive:#667044;--muted:#777568;--line:#d8cfbd;--serif:'Instrument Serif',Georgia,serif;--sans:'DM Sans',sans-serif}
+html,body{background:var(--paper);color:var(--ink);font-family:var(--sans)}
+button,input,select,textarea{font-family:var(--sans)}
+.brand-word,.route-title,.section-heading h2,.product-detail-copy h1,.account-panel h2,.admin-form h2{font-family:var(--serif)}
+.announcement{background:#30372b;color:#f4f0e7;letter-spacing:.16em}
+.site-header{background:#f4f0e7;border-bottom:1px solid var(--line)}
+.brand-word{letter-spacing:.08em}.brand-word i{color:#8a442f}
+.catalogue-masthead{min-height:560px;padding:clamp(40px,8vw,110px) 8%;display:grid;grid-template-columns:1fr 1fr;gap:5%;align-items:center;background:#e9e1d1}
+.masthead-copy h1{font:400 clamp(56px,7vw,100px)/.94 var(--serif);letter-spacing:-.025em;margin:25px 0}.masthead-copy h1 em{color:#667044}.masthead-copy>p:not(.eyebrow){max-width:420px;color:#6d6a5d;font-size:14px;line-height:1.9}.masthead-art{height:450px;background:#e2d8c5;display:grid;place-items:center;padding:35px}.masthead-art img{width:100%;height:100%;object-fit:contain}
+.catalogue-section{padding-top:70px;padding-bottom:80px}.catalogue-section:nth-of-type(even){background:#eee8dc}.catalogue-section .section-heading{display:flex;align-items:end;justify-content:space-between;margin-bottom:30px}.catalogue-section .section-heading h2{font-size:clamp(34px,4vw,54px);margin:8px 0}.catalogue-section .section-heading p:not(.eyebrow){font-size:12px;color:var(--muted)}
+.product-card{background:transparent}.product-image-wrap{background:#e9e1d1}.product-image-wrap img{transition:transform .45s ease}.product-card:hover .product-image-wrap img{transform:scale(1.035)}.product-meta{color:#777568}.product-name{font:400 21px var(--serif)}.price-line strong{font-weight:600}
+.primary-link,.checkout-button{background:#30372b;color:#f8f4ec;border:1px solid #30372b;letter-spacing:.08em;text-transform:uppercase;font-size:10px}.primary-link:hover,.checkout-button:hover{background:#8a442f;border-color:#8a442f}
+.wish-button{background:#f4f0e7;color:#30372b}.site-footer{background:#30372b;color:#f4f0e7}.site-footer .brand-word{color:#f4f0e7}.footer-links button{color:#f4f0e7}
+.account-page,.admin-page{background:#eee8dc}.account-panel,.admin-form,.admin-list-section,.admin-stats article{background:#faf8f2;border-color:#d8cfbd;box-shadow:0 12px 34px #29251a08}
+.profile-avatar{overflow:hidden}.profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.admin-list-section{border-radius:3px}.admin-form input,.admin-form textarea,.admin-form select,.account-panel input{background:#fffdf8;border-color:#d8cfbd}
+.admin-stats strong{color:#667044}.admin-notice{background:#e4e8d8;color:#35402c}
+.legal-page{max-width:900px;margin:auto;line-height:1.9}.legal-page h2{font:400 29px var(--serif);margin:34px 0 8px}.legal-page p{font-size:13px;color:#68675d;max-width:760px}.legal-updated{font-size:11px;color:var(--muted)}
+.story-art{display:block;max-width:600px;width:100%;margin:45px auto;background:#e9e1d1;padding:30px}
+.empty-results{background:#eee8dc;border:1px solid var(--line);padding:45px 20px;text-align:center}
+@media(max-width:720px){.catalogue-masthead{grid-template-columns:1fr;min-height:0;padding:35px 20px 45px;gap:28px}.masthead-copy h1{font-size:60px}.masthead-art{height:300px;padding:20px}.catalogue-section{padding-top:45px;padding-bottom:55px}.catalogue-section .section-heading{align-items:flex-start;gap:15px}.catalogue-section .section-heading h2{font-size:38px}}
