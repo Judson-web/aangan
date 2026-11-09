@@ -164,7 +164,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       const d=await body(); const id=crypto.randomUUID(); const name=String(d.name??"").trim(); const price=Number(d.price);
       if(!name || !Number.isSafeInteger(price) || price<0) return json({error:"Product name and a valid price are required."},400);
       const slug=String(d.slug??name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")).slice(0,120);
-      await env.DB.prepare("INSERT INTO products(id,slug,name,description,category,price,compare_at_price,image_url,stock) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,slug,name,String(d.description??""),String(d.category??"General"),price,Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,String(d.imageUrl??""),Math.max(0,Math.min(100000,Number(d.stock??0)))).run();
+      await env.DB.prepare("INSERT INTO products(id,slug,name,description,category,price,compare_at_price,image_url,stock) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,slug,name,String(d.description??""),String(d.category??"General"),price,d.compareAtPrice!==null&&d.compareAtPrice!==undefined&&d.compareAtPrice!==""&&Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,String(d.imageUrl??""),Math.max(0,Math.min(100000,Number(d.stock??0)))).run();
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"created","product",id).run();
       return json({id},201);
     }
@@ -177,8 +177,9 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
     }
     if(url.pathname.startsWith("/api/admin/coupons/") && method==="PUT"){
       const id=decodeURIComponent(url.pathname.split("/").pop()??"");
-      const d=await body();
-      await env.DB.prepare("UPDATE coupons SET active=?,discount_type=?,discount_value=?,min_order_value=?,max_uses=?,expires_at=? WHERE id=?").bind(d.active===false?0:1,d.discountType==="fixed"?"fixed":"percent",Math.max(1,Number(d.discountValue??1)),Math.max(0,Number(d.minimumOrder??0)),Number.isSafeInteger(Number(d.maxUses))?Number(d.maxUses):null,typeof d.expiresAt==="string"?d.expiresAt:null,id).run();
+      const d=await body(); const type=d.discountType==="fixed"?"fixed":"percent"; const value=Number(d.discountValue??1);
+      if(!Number.isSafeInteger(value)||value<=0||(type==="percent"&&value>100)) return json({error:"Enter a valid coupon discount."},400);
+      await env.DB.prepare("UPDATE coupons SET active=?,discount_type=?,discount_value=?,min_order_value=?,max_uses=?,expires_at=? WHERE id=?").bind(d.active===false?0:1,type,value,Math.max(0,Number(d.minimumOrder??0)),d.maxUses!==null&&d.maxUses!==undefined&&d.maxUses!==""&&Number.isSafeInteger(Number(d.maxUses))?Number(d.maxUses):null,typeof d.expiresAt==="string"?d.expiresAt:null,id).run();
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"updated","coupon",id).run();
       return json({ok:true});
     }
