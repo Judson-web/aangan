@@ -9,7 +9,7 @@ Thrilokha Shilpa is an editorial Indian craft and lifestyle marketplace. It pair
 - **Saved pieces and bag:** browser-persisted wishlist and shopping bag, quantity controls and subtotal summary.
 - **Editorial storytelling:** photographic collection stories, craft notes and maker-led brand pages.
 - **Responsive navigation:** desktop category ribbon, mobile navigation dock, menu drawer and search.
-- **Human verification:** Cloudflare Turnstile managed challenge, verified server-side by the Cloudflare Worker. A signed, HttpOnly, Secure, SameSite cookie remembers a successful verification for 30 days.
+- **Human verification:** Cloudflare Turnstile managed challenge enforced at the Worker document boundary. The Worker verifies Siteverify success and the expected hostname, then issues a signed, HttpOnly, Secure, SameSite cookie that remembers a successful verification for 30 days. Unverified document requests receive the challenge page before the storefront HTML is served.
 
 The current catalogue, pricing and product imagery are illustrative. Cart and wishlist are stored locally in the shopper's browser. Checkout is a preview only: payments, inventory, customer accounts, order management, shipping fulfilment and newsletter delivery are not connected to a commerce backend.
 
@@ -50,7 +50,7 @@ The production Worker is named `aangan` and serves the storefront at `https://aa
 1. In Cloudflare, open **Turnstile** and confirm the widget named **Thrilokha Shilpa storefront human verification**. Its allowed hostname is `aangan.ks-redeemer.workers.dev`, and its mode is Managed.
 2. Add the widget's secret key to the `aangan` Worker as a secret named `TURNSTILE_SECRET_KEY`. Do not put the secret in source control or a `VITE_*` variable.
 3. The public site key is configured in `src/App.tsx`. If the widget is ever recreated, update `TURNSTILE_SITE_KEY` there with its new public site key.
-4. Deploy the Worker with the production GitHub Actions workflow. The Worker verifies each Turnstile token against Cloudflare Siteverify and issues a signed 30-day HttpOnly cookie. The browser cannot mint or edit this cookie.
+4. Deploy the Worker with the production GitHub Actions workflow. The Worker intercepts browser document requests before serving the storefront. Visitors without a valid signed session receive a Cloudflare Turnstile managed challenge. The Worker verifies each token against Cloudflare Siteverify, checks the expected hostname, and issues a signed 30-day HttpOnly cookie. The browser cannot mint or edit this cookie. Static asset requests remain cacheable and do not need a separate challenge.
 
 To add the Worker secret with Wrangler:
 
@@ -66,7 +66,7 @@ GitHub Actions uses the repository secret `CLOUDFLARE_API_TOKEN` for permanent p
 
 - `src/App.tsx`: routed storefront, catalogue interactions and verification UI.
 - `src/catalog.ts`: illustrative categories and products.
-- `src/worker.ts`: Turnstile Siteverify endpoint, signed verification session and static asset handler.
+- `src/worker.ts`: server-enforced Turnstile gate, Siteverify endpoint, signed verification session and static asset handler.
 - `src/styles.css`: responsive visual system.
 - `wrangler.jsonc`: Worker entry point and static asset binding.
 - `.github/workflows/`: CI and production deployment.
