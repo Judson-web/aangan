@@ -94,6 +94,10 @@ export default function AccountPage({ mode }: Props) {
       setProduct(blankProduct());setEditingId(null);await loadAdmin();
     }catch(x){setNotice(x instanceof Error?x.message:"Could not save product.");}
   }
+  async function toggleCoupon(item:Coupon){
+    try{await request("/api/admin/coupons/"+encodeURIComponent(item.id),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({...item,active:!item.active,minimumOrder:item.min_order_value,maxUses:item.max_uses})});setNotice(item.active?"Coupon paused.":"Coupon activated.");await loadAdmin();}
+    catch(x){setNotice(x instanceof Error?x.message:"Could not update coupon.");}
+  }
   async function saveCoupon(e:FormEvent){
     e.preventDefault();setNotice("");
     try{
@@ -164,7 +168,7 @@ export default function AccountPage({ mode }: Props) {
         {products.length===0?<p className="admin-empty">Your catalogue is empty. Add the first real product above.</p>:<div className="admin-product-list">{products.map(item=><article key={item.id}><img src={item.image_url||"/favicon.svg"} alt=""/><div><strong>{item.name}</strong><small>{item.category} · ₹{item.price.toLocaleString("en-IN")} · Stock {item.stock} · {item.active?"Published":"Hidden"}</small></div><button className="icon-button" onClick={()=>editProduct(item)} aria-label={"Edit "+item.name}><Pencil size={16}/></button></article>)}</div>}
       </section>
       <section className="admin-list-section"><div className="admin-list-heading"><div><p className="eyebrow">PROMOTIONS</p><h2>Offers <em>({coupons.length})</em></h2></div></div>
-        {coupons.length===0?<p className="admin-empty">No coupons have been created yet.</p>:<div className="coupon-list">{coupons.map(item=><article key={item.id}><TicketPercent size={19}/><div><strong>{item.code}</strong><small>{item.discount_type==="percent"?item.discount_value+"% off":"₹"+item.discount_value+" off"} · Used {item.used_count}{item.max_uses?"/"+item.max_uses:""} times</small></div><span>{item.active?"Active":"Inactive"}</span></article>)}</div>}
+        {coupons.length===0?<p className="admin-empty">No coupons have been created yet.</p>:<div className="coupon-list">{coupons.map(item=><article key={item.id}><TicketPercent size={19}/><div><strong>{item.code}</strong><small>{item.discount_type==="percent"?item.discount_value+"% off":"₹"+item.discount_value+" off"} · Used {item.used_count}{item.max_uses?"/"+item.max_uses:""} times</small></div><button type="button" className="coupon-toggle" onClick={()=>void toggleCoupon(item)}>{item.active?"Pause":"Activate"}</button></article>)}</div>}
       </section>
       {stats?.recentActivity?.length? <section className="admin-list-section"><p className="eyebrow">STORE AUDIT TRAIL</p><h2>Recent activity</h2><div className="activity-list">{stats.recentActivity.map((item,i)=><p key={i}><span>{item.action} {item.entity_type}</span><time>{new Date(item.created_at).toLocaleString("en-IN")}</time></p>)}</div></section>:null}
       {notice&&<p role="status" className="admin-notice">{notice}</p>}
