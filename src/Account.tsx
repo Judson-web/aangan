@@ -141,7 +141,7 @@ export default function AccountPage({ mode }: Props) {
           <p className="eyebrow">CATALOGUE MANAGEMENT</p><h2>{editingId?"Edit product":"Add a product"}</h2>
           <label>Product name<input required value={product.name} onChange={e=>setProduct({...product,name:e.target.value})}/></label>
           <label>Description<textarea value={product.description} onChange={e=>setProduct({...product,description:e.target.value})}/></label>
-          <div className="form-two"><label>Category<input value={product.category} onChange={e=>setProduct({...product,category:e.target.value})}/></label><label>Price (₹)<input type="number" min="0" required value={product.price} onChange={e=>setProduct({...product,price:e.target.value})}/></label></div>
+          <div className="form-two"><label>Category<select value={product.category} onChange={e=>setProduct({...product,category:e.target.value})}><option>Home</option><option>Wear</option><option>Jewellery</option><option>Art</option></select></label><label>Price (₹)<input type="number" min="0" required value={product.price} onChange={e=>setProduct({...product,price:e.target.value})}/></label></div>
           <div className="form-two"><label>Offer / compare-at price<input type="number" min="0" value={product.compareAtPrice} onChange={e=>setProduct({...product,compareAtPrice:e.target.value})}/></label><label>Stock<input type="number" min="0" value={product.stock} onChange={e=>setProduct({...product,stock:e.target.value})}/></label></div>
           <label>Product image<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>void uploadImage(e.target.files?.[0])}/></label>
           {uploading&&<p className="upload-state">Uploading image…</p>}
