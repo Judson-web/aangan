@@ -74,7 +74,7 @@ async function currentUser(request: Request, env: Env) {
     const email = identity.email.trim().toLowerCase();
     const displayName = (identity.user_metadata?.full_name ?? identity.user_metadata?.name ?? "").slice(0, 80);
     await env.DB.prepare("INSERT INTO profiles(id,email,display_name) VALUES(?,?,?) ON CONFLICT(email) DO NOTHING").bind(identity.id,email,displayName).run();
-    const row = await env.DB.prepare("SELECT p.id,p.email,p.display_name,COALESCE(a.role,'customer') AS role FROM profiles p LEFT JOIN store_admins a ON lower(a.email)=lower(p.email) WHERE lower(p.email)=lower(?)").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
+    const row = await env.DB.prepare("SELECT p.id,p.email,p.display_name,p.avatar_url,COALESCE(a.role,'customer') AS role FROM profiles p LEFT JOIN store_admins a ON lower(a.email)=lower(p.email) WHERE lower(p.email)=lower(?)").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
     return row ?? null;
   } catch { return null; }
 }
