@@ -189,6 +189,14 @@ function App() {
     void fetch("/api/wishlist", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: wishlist }) });
   }, [wishlist, cloudUser, cloudReady]);
   useEffect(() => {
+    if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => { document.body.style.overflow = previousOverflow; window.removeEventListener("keydown", onKeyDown); };
+  }, [menuOpen]);
+  useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(""), 2600);
     return () => window.clearTimeout(timer);
@@ -244,7 +252,7 @@ function App() {
 
   const isShop = pathname === "/shop" || pathname.startsWith("/shop/");
   return <div className="site-shell">
-    <div className="announcement"><span>THE THRILOKHA SHILPA EDIT · BEAUTY IN EVERY DETAIL</span><span>COMPLIMENTARY SHIPPING ABOVE ₹2,500</span></div>
+    <div className="announcement"><span>THE THRILOKHA SHILPA EDIT · BEAUTY IN EVERY DETAIL</span><span>A MORE CONSIDERED WAY TO SHOP</span></div>
     <header className="site-header">
       <button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setMenuOpen(true)}><Menu /></button>
       <nav className="desktop-nav" aria-label="Main navigation">
