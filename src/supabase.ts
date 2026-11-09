@@ -62,6 +62,23 @@ export async function requestEmailLink(email: string, shouldCreateUser = false) 
   });
 }
 
+export async function requestEmailCode(email: string) {
+  return supabase.auth.signInWithOtp({
+    email: normalizedEmail(email),
+    options: {
+      shouldCreateUser: false,
+    },
+  });
+}
+
+export async function verifyEmailCode(email: string, token: string) {
+  return supabase.auth.verifyOtp({
+    email: normalizedEmail(email),
+    token: token.replace(/\s/g, ""),
+    type: "email",
+  });
+}
+
 export async function requestPasswordReset(email: string) {
   return supabase.auth.resetPasswordForEmail(normalizedEmail(email), {
     redirectTo: profileRedirect(),
