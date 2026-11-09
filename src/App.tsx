@@ -121,7 +121,6 @@ function App() {
   const [pathname, setPathname] = useState(window.location.pathname);
   const [verified, setVerified] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [category, setCategory] = useState<Category>("All");
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -160,7 +159,7 @@ function App() {
   const routeCategory = pathname.startsWith("/shop/")
     ? (categories.find((item) => item.name.toLowerCase() === pathname.split("/")[2])?.name ?? "All")
     : "All";
-  const effectiveCategory = pathname.startsWith("/shop/") ? routeCategory : category;
+  const effectiveCategory = pathname === "/shop" || pathname.startsWith("/shop/") ? routeCategory : "All";
   const visibleProducts = useMemo(() => {
     const filtered = products.filter((product) => {
       const matchesCategory = effectiveCategory === "All" || product.category === effectiveCategory;
@@ -191,9 +190,7 @@ function App() {
     setWishlist((current) => exists ? current.filter((item) => item !== id) : [...current, id]);
     setToast(exists ? "Removed from your saved pieces" : "Saved for another day");
   };
-  const shop = (next: Category = "All") => {
-    setCategory(next); navigate(next === "All" ? "/shop" : `/shop/${next.toLowerCase()}`);
-  };
+  const shop = (next: Category = "All") => navigate(next === "All" ? "/shop" : `/shop/${next.toLowerCase()}`);
   const productGrid = (items: Product[]) => items.length
     ? <div className="product-grid">{items.map((product) => <ProductCard key={product.id} product={product} wished={wishlist.includes(product.id)} onWish={toggleWish} onOpen={(item) => navigate(`/product/${item.id}`)} onAdd={addToCart} />)}</div>
     : <div className="empty-results"><Search size={24} /><h3>Nothing found just yet.</h3><p>Try another search or browse the full collection.</p><button className="text-link" onClick={() => { setQuery(""); shop("All"); }}>Clear filters <ArrowRight size={15} /></button></div>;
@@ -223,7 +220,7 @@ function App() {
       </div>
     </header>
     <div className="category-ribbon"><button onClick={() => shop("All")}>ALL OBJECTS</button>{categories.map((item) => <button key={item.name} onClick={() => shop(item.name)}>{item.name.toUpperCase()}</button>)}<span>THOUGHTFULLY FOUND · BEAUTIFULLY MADE</span></div>
-    {searchOpen && <form className="search-bar" onSubmit={(event) => { event.preventDefault(); setCategory("All"); navigate("/shop"); }}><Search size={18} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search objects, makers, materials…" aria-label="Search catalogue" /><button type="button" onClick={() => { setQuery(""); setSearchOpen(false); }} aria-label="Close search"><X size={18} /></button><button className="search-submit" type="submit">SEARCH</button></form>}
+    {searchOpen && <form className="search-bar" onSubmit={(event) => { event.preventDefault(); navigate("/shop"); }}><Search size={18} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search objects, makers, materials…" aria-label="Search catalogue" /><button type="button" onClick={() => { setQuery(""); setSearchOpen(false); }} aria-label="Close search"><X size={18} /></button><button className="search-submit" type="submit">SEARCH</button></form>}
 
     <main key={pathname}>
       {pathname === "/" && <>
