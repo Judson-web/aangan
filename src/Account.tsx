@@ -1,33 +1,175 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { ArrowRight, ArrowUpRight, ShieldCheck, UserRound } from "lucide-react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { ArrowRight, ArrowUpRight, Check, ImagePlus, LogOut, Package, Pencil, ShieldCheck, TicketPercent, UserRound, Users } from "lucide-react";
 
-type User = { id: string; email: string; display_name: string; role: string };
-type Stats = { products: number; customers: number; orders: number; activeCoupons: number; recentActivity: Array<{action:string;entity_type:string;created_at:string}> };
+type User = { id: string; email: string; display_name: string; role: "customer" | "admin" };
+type Product = { id:string; name:string; description:string; category:string; price:number; compare_at_price:number|null; image_url:string; stock:number; active:number };
+type Coupon = { id:string; code:string; discount_type:"percent"|"fixed"; discount_value:number; min_order_value:number; max_uses:number|null; used_count:number; expires_at:string|null; active:number };
+type Stats = { products:number; customers:number; orders:number; revenue:number; paymentsEnabled:boolean; activeCoupons:number; recentActivity:Array<{action:string;entity_type:string;created_at:string}> };
 type Props = { mode: string };
+const blankProduct = () => ({name:"",description:"",category:"General",price:"",compareAtPrice:"",imageUrl:"",stock:"0",active:true});
+const blankCoupon = () => ({code:"",discountType:"percent",discountValue:"10",minimumOrder:"0",maxUses:"",expiresAt:""});
+
+async function request<T>(url:string, init?:RequestInit):Promise<T>{
+  const response=await fetch(url,{credentials:"same-origin",...init});
+  const data=await response.json() as T & {error?:string};
+  if(!response.ok) throw new Error(data.error??"Something went wrong. Please try again.");
+  return data;
+}
+
 export default function AccountPage({ mode }: Props) {
-  const [user,setUser] = useState<User|null>(null);
-  const [email,setEmail] = useState("");
-  const [code,setCode] = useState("");
-  const [step,setStep] = useState<"email"|"code">("email");
-  const [error,setError] = useState("");
-  const [busy,setBusy] = useState(false);
-  const [stats,setStats] = useState<Stats|null>(null);
-  const [product,setProduct] = useState({name:"",description:"",category:"General",price:"",compareAtPrice:"",imageUrl:"",stock:"0"});
-  const [coupon,setCoupon] = useState({code:"",discountType:"percent",discountValue:"10",minimumOrder:"0",maxUses:"",expiresAt:""});
-  const [notice,setNotice] = useState("");
-  useEffect(()=>{fetch("/api/auth/me").then(r=>r.json()).then(d=>setUser(d.user??null)).catch(()=>setUser(null));},[]);
-  useEffect(()=>{if(mode==="admin"&&user?.role==="admin")fetch("/api/admin/stats").then(r=>r.json()).then(setStats).catch(()=>{});},[mode,user?.role]);
-  async function requestCode(e:FormEvent){e.preventDefault();setBusy(true);setError("");try{const r=await fetch("/api/auth/request-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});const d=await r.json();if(!r.ok)throw new Error(d.error);setStep("code");}catch(x){setError(x instanceof Error?x.message:"Could not send sign-in code.");}finally{setBusy(false);}}
-  async function verifyCode(e:FormEvent){e.preventDefault();setBusy(true);setError("");try{const r=await fetch("/api/auth/verify-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,code})});const d=await r.json();if(!r.ok)throw new Error(d.error);setUser(d.user);history.replaceState({},"","/profile");}catch(x){setError(x instanceof Error?x.message:"That code could not be verified.");}finally{setBusy(false);}}
-  async function signOut(){await fetch("/api/auth/logout",{method:"POST"});setUser(null);history.replaceState({},"","/");location.reload();}
-  async function saveProduct(e:FormEvent){e.preventDefault();setNotice("");const r=await fetch("/api/admin/products",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(product)});const d=await r.json();if(!r.ok){setNotice(d.error??"Could not save product.");return;}setNotice("Product saved to Cloudflare D1.");setProduct({name:"",description:"",category:"General",price:"",compareAtPrice:"",imageUrl:"",stock:"0"});fetch("/api/admin/stats").then(x=>x.json()).then(setStats);}
-  async function saveCoupon(e:FormEvent){e.preventDefault();setNotice("");const r=await fetch("/api/admin/coupons",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(coupon)});const d=await r.json();if(!r.ok){setNotice(d.error??"Could not create offer.");return;}setNotice("Coupon created.");setCoupon({code:"",discountType:"percent",discountValue:"10",minimumOrder:"0",maxUses:"",expiresAt:""});fetch("/api/admin/stats").then(x=>x.json()).then(setStats);}
-  const statsList = stats ? [["Live products",stats.products],["Customer accounts",stats.customers],["Orders",stats.orders],["Active coupons",stats.activeCoupons]] : [["Live products","…"],["Customer accounts","…"],["Orders","…"],["Active coupons","…"]];
+  const [user,setUser]=useState<User|null>(null);
+  const [email,setEmail]=useState("");
+  const [code,setCode]=useState("");
+  const [displayName,setDisplayName]=useState("");
+  const [step,setStep]=useState<"email"|"code">("email");
+  const [error,setError]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [stats,setStats]=useState<Stats|null>(null);
+  const [products,setProducts]=useState<Product[]>([]);
+  const [coupons,setCoupons]=useState<Coupon[]>([]);
+  const [product,setProduct]=useState(blankProduct);
+  const [editingId,setEditingId]=useState<string|null>(null);
+  const [coupon,setCoupon]=useState(blankCoupon);
+  const [notice,setNotice]=useState("");
+  const [uploading,setUploading]=useState(false);
+
+  const loadAdmin=useCallback(async()=>{
+    const [s,p,c]=await Promise.all([
+      request<Stats>("/api/admin/stats"),
+      request<{products:Product[]}>("/api/admin/products"),
+      request<{coupons:Coupon[]}>("/api/admin/coupons")
+    ]);
+    setStats(s);setProducts(p.products??[]);setCoupons(c.coupons??[]);
+  },[]);
+  useEffect(()=>{request<{user:User|null}>("/api/auth/me").then(d=>setUser(d.user)).catch(()=>setUser(null));},[]);
+  useEffect(()=>{
+    if(mode!=="admin"||user?.role!=="admin")return;
+    let alive=true;
+    const refresh=()=>loadAdmin().catch(e=>{if(alive)setNotice(e instanceof Error?e.message:"Could not refresh store data.");});
+    refresh();
+    const timer=window.setInterval(refresh,30000);
+    return()=>{alive=false;window.clearInterval(timer);};
+  },[mode,user?.role,loadAdmin]);
+
+  async function requestCode(e:FormEvent){
+    e.preventDefault();setBusy(true);setError("");
+    try{await request("/api/auth/request-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});setStep("code");}
+    catch(x){setError(x instanceof Error?x.message:"Could not send sign-in code.");}
+    finally{setBusy(false);}
+  }
+  async function verifyCode(e:FormEvent){
+    e.preventDefault();setBusy(true);setError("");
+    try{
+      await request("/api/auth/verify-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,code,name:displayName})});
+      window.location.assign("/profile");
+    }catch(x){setError(x instanceof Error?x.message:"That code could not be verified.");}
+    finally{setBusy(false);}
+  }
+  async function signOut(){
+    await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"});
+    window.location.assign("/");
+  }
+  async function saveProfile(e:FormEvent){
+    e.preventDefault();setBusy(true);setNotice("");
+    try{const d=await request<{user:User}>("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({displayName})});setUser(d.user);setNotice("Your profile has been updated.");}
+    catch(x){setNotice(x instanceof Error?x.message:"Could not update your profile.");}
+    finally{setBusy(false);}
+  }
+  async function uploadImage(file?:File){
+    if(!file)return;
+    setUploading(true);setNotice("");
+    try{
+      const form=new FormData();form.append("file",file);
+      const result=await request<{url:string}>("/api/admin/media",{method:"POST",body:form});
+      setProduct(p=>({...p,imageUrl:result.url}));setNotice("Image uploaded securely to Cloudflare storage.");
+    }catch(x){setNotice(x instanceof Error?x.message:"Image upload failed.");}
+    finally{setUploading(false);}
+  }
+  async function saveProduct(e:FormEvent){
+    e.preventDefault();setNotice("");
+    const payload={...product,price:Number(product.price),compareAtPrice:product.compareAtPrice?Number(product.compareAtPrice):null,stock:Number(product.stock)};
+    try{
+      await request(editingId?"/api/admin/products/"+encodeURIComponent(editingId):"/api/admin/products",{method:editingId?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      setNotice(editingId?"Product changes saved.":"Product published to the storefront.");
+      setProduct(blankProduct());setEditingId(null);await loadAdmin();
+    }catch(x){setNotice(x instanceof Error?x.message:"Could not save product.");}
+  }
+  async function saveCoupon(e:FormEvent){
+    e.preventDefault();setNotice("");
+    try{
+      await request("/api/admin/coupons",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...coupon,discountValue:Number(coupon.discountValue),minimumOrder:Number(coupon.minimumOrder),maxUses:coupon.maxUses?Number(coupon.maxUses):null})});
+      setNotice("Coupon published and ready to use.");setCoupon(blankCoupon());await loadAdmin();
+    }catch(x){setNotice(x instanceof Error?x.message:"Could not publish coupon.");}
+  }
+  function editProduct(item:Product){
+    setEditingId(item.id);setProduct({name:item.name,description:item.description,category:item.category,price:String(item.price),compareAtPrice:item.compare_at_price===null?"":String(item.compare_at_price),imageUrl:item.image_url,stock:String(item.stock),active:Boolean(item.active)});
+    document.querySelector(".admin-form")?.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+
   return <section className="account-page section-pad route-section">
     <p className="eyebrow">THRILOKHA SHILPA · {mode==="admin"?"PRIVATE STORE STUDIO":"YOUR ACCOUNT"}</p>
     <h1 className="route-title">{mode==="admin"?<>Store <em>studio.</em></>:<>A little space <em>of your own.</em></>}</h1>
-    {mode==="login" && <div className="account-panel"><h2>{step==="email"?"Sign in or create an account":"Check your inbox"}</h2><p>{step==="email"?"Enter your email. We’ll send a one-time sign-in code. No password to remember.":"Your six-digit code is on its way to "+email+"."}</p>{step==="email"?<form onSubmit={requestCode}><label>Email address<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label><button className="checkout-button" disabled={busy}>{busy?"Sending…":"Send sign-in code"} <ArrowRight size={16}/></button></form>:<form onSubmit={verifyCode}><label>Six-digit code<input inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} placeholder="000000"/></label><button className="checkout-button" disabled={busy}>{busy?"Verifying…":"Verify and continue"} <ArrowRight size={16}/></button><button type="button" className="back-link" onClick={()=>setStep("email")}>Use a different email</button></form>}{error&&<p className="verification-error" role="alert">{error}</p>}</div>}
-    {mode==="profile" && (user?<div className="account-panel"><div className="profile-avatar"><UserRound/></div><h2>{user.display_name||"Welcome back"}</h2><p>{user.email}</p><span className="account-role">{user.role==="admin"?"Administrator":"Customer account"}</span><div className="account-links"><a href="/bag">Shopping bag <ArrowRight size={16}/></a><a href="/wishlist">Saved pieces <ArrowRight size={16}/></a>{user.role==="admin"&&<a href="/admin">Store administration <ArrowUpRight size={16}/></a>}</div><button className="back-link" onClick={signOut}>Sign out</button></div>:<div className="account-panel"><h2>Welcome to your account</h2><p>Sign in to keep your bag and saved pieces with you across devices.</p><a className="checkout-button" href="/login">Sign in or create account <ArrowRight size={16}/></a></div>)}
-    {mode==="admin" && (user?.role==="admin"?<><div className="admin-stats">{statsList.map(([label,value])=><article key={String(label)}><small>{label}</small><strong>{value}</strong></article>)}</div><div className="admin-forms"><form className="admin-form" onSubmit={saveProduct}><p className="eyebrow">CATALOGUE MANAGEMENT</p><h2>Add a product</h2><label>Product name<input required value={product.name} onChange={e=>setProduct({...product,name:e.target.value})}/></label><label>Description<textarea value={product.description} onChange={e=>setProduct({...product,description:e.target.value})}/></label><div className="form-two"><label>Category<input value={product.category} onChange={e=>setProduct({...product,category:e.target.value})}/></label><label>Price (₹)<input type="number" min="0" required value={product.price} onChange={e=>setProduct({...product,price:e.target.value})}/></label></div><div className="form-two"><label>Offer / compare-at price<input type="number" min="0" value={product.compareAtPrice} onChange={e=>setProduct({...product,compareAtPrice:e.target.value})}/></label><label>Stock<input type="number" min="0" value={product.stock} onChange={e=>setProduct({...product,stock:e.target.value})}/></label></div><label>Image URL<input type="url" value={product.imageUrl} onChange={e=>setProduct({...product,imageUrl:e.target.value})} placeholder="https://…"/></label><button className="checkout-button">Save product <ArrowUpRight size={16}/></button></form><form className="admin-form" onSubmit={saveCoupon}><p className="eyebrow">PROMOTIONS</p><h2>Create an offer</h2><label>Coupon code<input required value={coupon.code} onChange={e=>setCoupon({...coupon,code:e.target.value.toUpperCase()})} placeholder="WELCOME10"/></label><div className="form-two"><label>Discount type<select value={coupon.discountType} onChange={e=>setCoupon({...coupon,discountType:e.target.value})}><option value="percent">Percentage</option><option value="fixed">Fixed ₹</option></select></label><label>Discount value<input type="number" min="1" required value={coupon.discountValue} onChange={e=>setCoupon({...coupon,discountValue:e.target.value})}/></label></div><label>Minimum order (₹)<input type="number" min="0" value={coupon.minimumOrder} onChange={e=>setCoupon({...coupon,minimumOrder:e.target.value})}/></label><label>Maximum uses<input type="number" min="1" value={coupon.maxUses} onChange={e=>setCoupon({...coupon,maxUses:e.target.value})}/></label><label>Expiry date<input type="date" value={coupon.expiresAt} onChange={e=>setCoupon({...coupon,expiresAt:e.target.value})}/></label><button className="checkout-button">Publish coupon <ArrowUpRight size={16}/></button></form></div>{notice&&<p role="status" className="admin-notice">{notice}</p>}</>:<div className="account-panel"><ShieldCheck size={28}/><h2>Restricted area</h2><p>Only accounts with an administrator role can access store management.</p><a className="checkout-button" href={user?"/profile":"/login"}>{user?"Return to profile":"Sign in"} <ArrowRight size={16}/></a></div>)}
+    {mode==="login"&&<div className="account-panel">
+      <h2>{step==="email"?"Sign in or create an account":"Check your inbox"}</h2>
+      <p>{step==="email"?"Enter your email and we’ll send a one-time sign-in code. No password to remember.":"Your six-digit code is on its way to "+email+"."}</p>
+      {step==="email"?<form onSubmit={requestCode}>
+        <label>Your name (optional)<input value={displayName} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="How should we greet you?"/></label>
+        <label>Email address<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
+        <button className="checkout-button" disabled={busy}>{busy?"Sending…":"Send sign-in code"} <ArrowRight size={16}/></button>
+      </form>:<form onSubmit={verifyCode}>
+        <label>Six-digit code<input inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} placeholder="000000"/></label>
+        <button className="checkout-button" disabled={busy}>{busy?"Verifying…":"Verify and continue"} <ArrowRight size={16}/></button>
+        <button type="button" className="back-link" onClick={()=>setStep("email")}>Use a different email</button>
+      </form>}
+      {error&&<p className="verification-error" role="alert">{error}</p>}
+    </div>}
+    {mode==="profile"&&(user?<div className="account-panel profile-panel">
+      <div className="profile-avatar"><UserRound/></div><h2>{user.display_name||"Welcome back"}</h2><p>{user.email}</p>
+      <span className="account-role">{user.role==="admin"?"Administrator":"Customer account"}</span>
+      <form className="profile-edit-form" onSubmit={saveProfile}><label>Your display name<input value={displayName||user.display_name} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="Your name"/></label><button className="checkout-button" disabled={busy}>Save profile <Check size={16}/></button></form>
+      <div className="account-links"><a href="/bag">Shopping bag <ArrowRight size={16}/></a><a href="/wishlist">Saved pieces <ArrowRight size={16}/></a>{user.role==="admin"&&<a href="/admin">Store administration <ArrowUpRight size={16}/></a>}</div>
+      <button className="back-link" onClick={signOut}><LogOut size={15}/> Sign out</button>
+      {notice&&<p className="admin-notice" role="status">{notice}</p>}
+    </div>:<div className="account-panel"><h2>Welcome to your account</h2><p>Sign in to keep your bag and saved pieces with you across devices.</p><a className="checkout-button" href="/login">Sign in or create account <ArrowRight size={16}/></a></div>)}
+    {mode==="admin"&&(user?.role==="admin"?<>
+      <div className="admin-stats">{[
+        ["Live products",stats?.products??"…",Package],["Customer accounts",stats?.customers??"…",Users],["Orders",stats?.paymentsEnabled?stats.orders:"Not live",ShoppingBagIcon],["Active coupons",stats?.activeCoupons??"…",TicketPercent]
+      ].map(([label,value,Icon])=><article key={String(label)}><small>{String(label)}</small><strong>{String(value)}</strong></article>)}</div>
+      <div className="admin-live-note"><span className="live-dot"/> Statistics refresh every 30 seconds. Orders and revenue remain disabled until payment integration is enabled.</div>
+      <div className="admin-forms">
+        <form className="admin-form" onSubmit={saveProduct}>
+          <p className="eyebrow">CATALOGUE MANAGEMENT</p><h2>{editingId?"Edit product":"Add a product"}</h2>
+          <label>Product name<input required value={product.name} onChange={e=>setProduct({...product,name:e.target.value})}/></label>
+          <label>Description<textarea value={product.description} onChange={e=>setProduct({...product,description:e.target.value})}/></label>
+          <div className="form-two"><label>Category<input value={product.category} onChange={e=>setProduct({...product,category:e.target.value})}/></label><label>Price (₹)<input type="number" min="0" required value={product.price} onChange={e=>setProduct({...product,price:e.target.value})}/></label></div>
+          <div className="form-two"><label>Offer / compare-at price<input type="number" min="0" value={product.compareAtPrice} onChange={e=>setProduct({...product,compareAtPrice:e.target.value})}/></label><label>Stock<input type="number" min="0" value={product.stock} onChange={e=>setProduct({...product,stock:e.target.value})}/></label></div>
+          <label>Product image<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>void uploadImage(e.target.files?.[0])}/></label>
+          {uploading&&<p className="upload-state">Uploading image…</p>}
+          {product.imageUrl&&<div className="upload-preview"><img src={product.imageUrl} alt="Product preview"/><span>Image uploaded</span></div>}
+          <label className="admin-checkbox"><input type="checkbox" checked={product.active} onChange={e=>setProduct({...product,active:e.target.checked})}/> Visible in storefront</label>
+          <button className="checkout-button" disabled={uploading}>{editingId?"Save changes":"Publish product"} <ArrowUpRight size={16}/></button>
+          {editingId&&<button type="button" className="back-link" onClick={()=>{setEditingId(null);setProduct(blankProduct());}}>Cancel editing</button>}
+        </form>
+        <form className="admin-form" onSubmit={saveCoupon}>
+          <p className="eyebrow">PROMOTIONS</p><h2>Create an offer</h2>
+          <label>Coupon code<input required value={coupon.code} onChange={e=>setCoupon({...coupon,code:e.target.value.toUpperCase()})} placeholder="WELCOME10"/></label>
+          <div className="form-two"><label>Discount type<select value={coupon.discountType} onChange={e=>setCoupon({...coupon,discountType:e.target.value as "percent"|"fixed"})}><option value="percent">Percentage</option><option value="fixed">Fixed ₹</option></select></label><label>Discount value<input type="number" min="1" required value={coupon.discountValue} onChange={e=>setCoupon({...coupon,discountValue:e.target.value})}/></label></div>
+          <label>Minimum order (₹)<input type="number" min="0" value={coupon.minimumOrder} onChange={e=>setCoupon({...coupon,minimumOrder:e.target.value})}/></label>
+          <label>Maximum uses<input type="number" min="1" value={coupon.maxUses} onChange={e=>setCoupon({...coupon,maxUses:e.target.value})}/></label>
+          <label>Expiry date<input type="date" value={coupon.expiresAt} onChange={e=>setCoupon({...coupon,expiresAt:e.target.value})}/></label>
+          <button className="checkout-button">Publish coupon <ArrowUpRight size={16}/></button>
+        </form>
+      </div>
+      <section className="admin-list-section"><div className="admin-list-heading"><div><p className="eyebrow">LIVE CATALOGUE</p><h2>Products <em>({products.length})</em></h2></div><button className="text-link" onClick={()=>void loadAdmin()}>Refresh <ArrowRight size={15}/></button></div>
+        {products.length===0?<p className="admin-empty">Your catalogue is empty. Add the first real product above.</p>:<div className="admin-product-list">{products.map(item=><article key={item.id}><img src={item.image_url||"/favicon.svg"} alt=""/><div><strong>{item.name}</strong><small>{item.category} · ₹{item.price.toLocaleString("en-IN")} · Stock {item.stock} · {item.active?"Published":"Hidden"}</small></div><button className="icon-button" onClick={()=>editProduct(item)} aria-label={"Edit "+item.name}><Pencil size={16}/></button></article>)}</div>}
+      </section>
+      <section className="admin-list-section"><div className="admin-list-heading"><div><p className="eyebrow">PROMOTIONS</p><h2>Offers <em>({coupons.length})</em></h2></div></div>
+        {coupons.length===0?<p className="admin-empty">No coupons have been created yet.</p>:<div className="coupon-list">{coupons.map(item=><article key={item.id}><TicketPercent size={19}/><div><strong>{item.code}</strong><small>{item.discount_type==="percent"?item.discount_value+"% off":"₹"+item.discount_value+" off"} · Used {item.used_count}{item.max_uses?"/"+item.max_uses:""} times</small></div><span>{item.active?"Active":"Inactive"}</span></article>)}</div>}
+      </section>
+      {stats?.recentActivity?.length? <section className="admin-list-section"><p className="eyebrow">STORE AUDIT TRAIL</p><h2>Recent activity</h2><div className="activity-list">{stats.recentActivity.map((item,i)=><p key={i}><span>{item.action} {item.entity_type}</span><time>{new Date(item.created_at).toLocaleString("en-IN")}</time></p>)}</div></section>:null}
+      {notice&&<p role="status" className="admin-notice">{notice}</p>}
+    </>:<div className="account-panel"><ShieldCheck size={28}/><h2>Restricted area</h2><p>Only accounts with an administrator role granted by the store owner can access store management. Creating a customer account never grants admin access.</p><a className="checkout-button" href={user?"/profile":"/login"}>{user?"Return to profile":"Sign in"} <ArrowRight size={16}/></a></div>)}
   </section>;
 }
+
+function ShoppingBagIcon(){return <Package/>;}
