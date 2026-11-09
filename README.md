@@ -19,6 +19,10 @@ npm run test
 npm run build
 ```
 
+## Cloudflare production deployment
+
+The Worker is configured for the permanent Cloudflare account and deploys as `aangan` on its `workers.dev` subdomain. GitHub Actions deploys on pushes to `main` after type-checking, linting, tests and a production build. Add a repository Actions secret named `CLOUDFLARE_API_TOKEN` with permission to edit Workers Scripts in this account before the first production deployment. The workflow deliberately does not use `wrangler deploy --temporary`.
+
 ## Included
 Product discovery, category filtering, search, product details, wishlist interactions, a persistent local shopping bag, responsive navigation and newsletter form feedback.
 
