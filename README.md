@@ -1,33 +1,29 @@
-# Aangan
+# Thrilokha Shilpa
 
-Aangan is an editorial, craft-led shopping experience celebrating thoughtful objects, independent makers and contemporary Indian design.
+Thrilokha Shilpa is an editorial Indian craft and lifestyle marketplace. It pairs a familiar, easy-to-shop commerce structure with an art-directed visual identity: warm earthy colours, tactile textures, expressive Bodoni-inspired typography and maker-led photography.
 
-The storefront combines a warm, image-rich visual identity with familiar modern commerce patterns: clear discovery paths, curated collections, product cards, saved pieces and a persistent shopping bag.
+## Storefront experience
 
-## Experience
+- **Multi-page routing:** Home, Shop, category collections, individual product pages, saved pieces, shopping bag, Journal, Our Story and Help.
+- **Commerce discovery:** category navigation, catalogue search, sorting, product detail pages and quick add-to-bag actions.
+- **Saved pieces and bag:** browser-persisted wishlist and shopping bag, quantity controls and subtotal summary.
+- **Editorial storytelling:** photographic collection stories, craft notes and maker-led brand pages.
+- **Responsive navigation:** desktop category ribbon, mobile navigation dock, menu drawer and search.
+- **Human verification:** Cloudflare Turnstile managed challenge enforced at the Worker document boundary. The Worker verifies Siteverify success and the expected hostname, then issues a signed, HttpOnly, Secure, SameSite cookie that remembers a successful verification for 30 days. Unverified document requests receive the challenge page before the storefront HTML is served.
 
-- **Editorial discovery:** large photographic stories introduce collections and guide shoppers into curated categories.
-- **Shop by category:** browse Home, Wear, Jewellery and Art.
-- **Product discovery:** search by product, maker, category or origin; filter collections and sort by featured, price or name.
-- **Product details:** view descriptions, materials, maker and place of origin.
-- **Wishlist:** save and revisit favourite pieces.
-- **Shopping bag:** add products, adjust quantities, remove items and see the subtotal and complimentary-shipping progress.
-- **Responsive navigation:** desktop navigation, mobile quick-navigation dock, search and slide-in shopping bag.
-- **Maker-led storytelling:** editorial content and brand notes foreground craft and the people behind each piece.
-
-The current catalogue and product imagery are illustrative. Cart and wishlist state are stored locally in the shopper's browser. Checkout is a preview only: payments, inventory, customer accounts, order management and newsletter delivery are not connected to a commerce backend.
+The current catalogue, pricing and product imagery are illustrative. Cart and wishlist are stored locally in the shopper's browser. Checkout is a preview only: payments, inventory, customer accounts, order management, shipping fulfilment and newsletter delivery are not connected to a commerce backend.
 
 ## Design direction
 
-Aangan uses an earthy, editorial art direction: warm neutrals, olive accents, expressive serif typography, generous whitespace and photography-led layouts. The experience is designed to feel like a curated lifestyle marketplace rather than a plain product grid, while keeping shopping actions easy to find.
+The storefront uses the existing warm neutral, olive and natural-texture palette, with a more dramatic editorial serif inspired by fashion-magazine typography. The layout borrows familiar shopping conventions from large marketplaces without copying their branding or exact interface.
 
 ## Stack
 
-- React 19
-- TypeScript (strict)
+- React 19 and TypeScript (strict)
 - Vite
+- Cloudflare Workers and Workers Static Assets
+- Cloudflare Turnstile
 - Lucide React
-- Responsive CSS
 
 ## Getting started
 
@@ -40,8 +36,6 @@ npm run dev
 
 ## Quality checks
 
-Run the same checks used by GitHub Actions before submitting changes:
-
 ```bash
 npm run typecheck
 npm run lint
@@ -49,35 +43,38 @@ npm run test
 npm run build
 ```
 
-## Production deployment
+## Cloudflare configuration
 
-Aangan is deployed as the `aangan` Cloudflare Worker on the permanent account's `workers.dev` hostname.
+The production Worker is named `aangan` and serves the storefront at `https://aangan.ks-redeemer.workers.dev`.
 
-GitHub Actions runs the quality checks and deploys the production Worker on pushes to `main`. The deployment workflow uses Wrangler and the repository Actions secret `CLOUDFLARE_API_TOKEN`. The token should be scoped to the Aangan Worker with the minimum required Workers edit permissions. Temporary Cloudflare deployments are not used for production.
+1. In Cloudflare, open **Turnstile** and confirm the widget named **Thrilokha Shilpa storefront human verification**. Its allowed hostname is `aangan.ks-redeemer.workers.dev`, and its mode is Managed.
+2. Add the widget's secret key to the `aangan` Worker as a secret named `TURNSTILE_SECRET_KEY`. Do not put the secret in source control or a `VITE_*` variable.
+3. The public site key is configured in `src/App.tsx`. If the widget is ever recreated, update `TURNSTILE_SITE_KEY` there with its new public site key.
+4. Production deploys are handled by the connected Cloudflare Workers Builds pipeline on pushes to `main`. The Worker intercepts browser document requests before serving the storefront. Visitors without a valid signed session receive a Cloudflare Turnstile managed challenge. The Worker verifies each token against Cloudflare Siteverify, checks the expected hostname, and issues a signed 30-day HttpOnly cookie. The browser cannot mint or edit this cookie. Static asset requests remain cacheable and do not need a separate challenge.
 
-To deploy manually after authenticating Wrangler with the appropriate Cloudflare account:
+To add the Worker secret with Wrangler:
 
 ```bash
-npm install
-npm run typecheck
-npm run lint
-npm run test
-npm run build
-npx wrangler deploy
+npx wrangler secret put TURNSTILE_SECRET_KEY
 ```
+
+Paste the Turnstile secret when prompted. The Worker also needs the `ASSETS` binding configured in `wrangler.jsonc`; it is already declared in this repository.
+
+Cloudflare Workers Builds watches the repository's `main` branch and runs `npm run build` followed by `npx wrangler deploy` using its Cloudflare-managed build token. Pull-request preview deployments are disabled for this production Worker.
 
 ## Project structure
 
-- `src/App.tsx`: storefront layout, discovery interactions, product details, wishlist and bag.
-- `src/catalog.ts`: illustrative category and product catalogue.
-- `src/styles.css`: responsive visual system and component styling.
-- `wrangler.jsonc`: Cloudflare Worker and static asset configuration.
-- `.github/workflows/`: CI and production deployment workflows.
+- `src/App.tsx`: routed storefront, catalogue interactions and verification UI.
+- `src/catalog.ts`: illustrative categories and products.
+- `src/worker.ts`: server-enforced Turnstile gate, Siteverify endpoint, signed verification session and static asset handler.
+- `src/styles.css`: responsive visual system.
+- `wrangler.jsonc`: Worker entry point and static asset binding.
+- `.github/workflows/`: CI and production deployment.
 
-## Scope and next steps
+## Launch scope
 
-This repository currently delivers the storefront experience and client-side shopping interactions. A production commerce launch still needs a backend for authoritative catalogue and inventory data, checkout and payment processing, order management, customer identity, and newsletter subscriptions. Those services should be integrated before accepting real orders.
+Before accepting real orders, connect authoritative product and inventory data, customer identity, checkout and payment processing, order management, shipping fulfilment, returns and newsletter delivery.
 
 ---
 
-Made with meaning, in India.
+Craft · Culture · Consideration.

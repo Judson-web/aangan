@@ -1,15 +1,21 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aangan",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-11-09",
   "workers_dev": true,
   "preview_urls": true,
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*"
+    ]
   },
   "observability": {
     "enabled": true
   },
-  "account_id": "b45bd4f50a1e0280366712348fe2055a"
+  "account_id": "b45bd4f50a1e0280366712348fe2055a",
+  "previews": {}
 }
