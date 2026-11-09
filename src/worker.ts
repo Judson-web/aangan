@@ -114,7 +114,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
     await env.DB.prepare("DELETE FROM auth_codes WHERE email=?").bind(email).run();
     const id=crypto.randomUUID();
     await env.DB.prepare("INSERT INTO profiles(id,email,display_name) VALUES(?,?,?) ON CONFLICT(email) DO NOTHING").bind(id,email,typeof data.name==="string"?data.name.trim().slice(0,80):"").run();
-    const profile=await env.DB.prepare("SELECT id,email,display_name,role FROM profiles WHERE email=?").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
+    const profile=await env.DB.prepare("SELECT p.id,p.email,p.display_name,COALESCE(a.role,'customer') AS role FROM profiles p LEFT JOIN store_admins a ON lower(a.email)=lower(p.email) WHERE p.email=?").bind(email).first<{id:string;email:string;display_name:string;role:string}>();
     if(!profile) return json({error:"Account could not be created."},500);
     const token=crypto.randomUUID()+crypto.randomUUID(); const expires=Math.floor(Date.now()/1000)+AUTH_TTL;
     await env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)").bind(await digest(token),profile.id,expires,Math.floor(Date.now()/1000)).run();
