@@ -19,7 +19,7 @@ const COOKIE_NAME = "thrilokha_human";
 const SESSION_TTL = 60 * 60 * 24 * 30;
 const encoder = new TextEncoder();
 const SITE_KEY = "0x4AAAAAAF5jPBnSE5tW7V28";
-const EXPECTED_HOSTNAME = "aangan.ks-redeemer.workers.dev";
+const EXPECTED_HOSTNAME = "thrilokha-shilpa.ks-redeemer.workers.dev";
 
 function json(body: unknown, status = 200, headers: HeadersInit = {}) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers } });
