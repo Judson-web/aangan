@@ -111,7 +111,7 @@ export default function AccountPage({ mode }: Props) {
         const {error}=await requestEmailCode(email);
         if(error)throw error;
         setEmailCode("");
-        setSentMessage("Enter the six-digit code from your email. It expires shortly, and you can request another code if needed.");
+        setSentMessage("Enter the eight-digit code from your email. It expires shortly, and you can request another code if needed.");
         setStep("code-sent");
         return;
       }
@@ -137,7 +137,7 @@ export default function AccountPage({ mode }: Props) {
     e.preventDefault();setBusy(true);setError("");
     try{
       const token=emailCode.replace(/\s/g,"");
-      if(!/^\d{6}$/.test(token))throw new Error("Enter the six-digit code from your email.");
+      if(!/^\d{8}$/.test(token))throw new Error("Enter the eight-digit code from your email.");
       const {error}=await verifyEmailCode(email,token);
       if(error)throw error;
       window.location.assign("/profile");
@@ -152,7 +152,7 @@ export default function AccountPage({ mode }: Props) {
       const {error}=await requestEmailCode(email);
       if(error)throw error;
       setEmailCode("");
-      setSentMessage("A fresh six-digit code has been sent. Use the newest message.");
+      setSentMessage("A fresh eight-digit code has been sent. Use the newest message.");
     }catch(x){setError(x instanceof Error?x.message:"We couldn't send another code.");}
     finally{setBusy(false);}
   }
@@ -264,8 +264,8 @@ export default function AccountPage({ mode }: Props) {
             <div className="auth-success-mark"><Mail/></div>
             <p className="auth-sent-address">{email}</p>
             <form className="auth-form code-verify-form" onSubmit={verifyCode}>
-              <label htmlFor="email-login-code">Six-digit email code</label>
-              <input id="email-login-code" className="auth-code-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={emailCode} onChange={e=>setEmailCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="000000"/>
+              <label htmlFor="email-login-code">Eight-digit email code</label>
+              <input id="email-login-code" className="auth-code-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{8}" maxLength={8} required value={emailCode} onChange={e=>setEmailCode(e.target.value.replace(/\D/g,"").slice(0,8))} placeholder="000000"/>
               <button className="checkout-button auth-submit" disabled={busy}>{busy?"Verifying…":"Verify and sign in"} <ArrowRight size={16}/></button>
             </form>
             <button type="button" className="auth-text-button auth-resend" onClick={()=>void resendCode()} disabled={busy}>Resend code</button>
