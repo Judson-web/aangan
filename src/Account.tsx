@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { apiFetch, supabase, signInWithPassword, signUpWithPassword, requestEmailLink, requestPasswordReset, updatePassword, signOut as supabaseSignOut } from "./supabase";
+import { apiFetch, supabase, signInWithPassword, signUpWithPassword, requestEmailLink, requestEmailCode, verifyEmailCode, requestPasswordReset, updatePassword, signOut as supabaseSignOut } from "./supabase";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Eye, EyeOff, KeyRound, LogOut, Mail, Pencil, ShieldCheck, TicketPercent, UserRound } from "lucide-react";
 
 type User = { id: string; email: string; display_name: string; avatar_url?: string; role: "customer" | "admin" | "super_admin" };
@@ -24,10 +24,11 @@ export default function AccountPage({ mode }: Props) {
   const [email,setEmail]=useState("");
   const [displayName,setDisplayName]=useState("");
   const [authTab,setAuthTab]=useState<"signin"|"signup">("signin");
-  const [authMethod,setAuthMethod]=useState<"password"|"link">("password");
-  const [step,setStep]=useState<"form"|"sent"|"reset-sent">("form");
+  const [authMethod,setAuthMethod]=useState<"password"|"link"|"code">("password");
+  const [step,setStep]=useState<"form"|"sent"|"reset-sent"|"code-sent">("form");
   const [sentMessage,setSentMessage]=useState("");
   const [password,setPassword]=useState("");
+  const [emailCode,setEmailCode]=useState("");
   const [confirmPassword,setConfirmPassword]=useState("");
   const [newPassword,setNewPassword]=useState("");
   const [confirmNewPassword,setConfirmNewPassword]=useState("");
@@ -106,6 +107,14 @@ export default function AccountPage({ mode }: Props) {
         setStep("sent");
         return;
       }
+      if(authMethod==="code"){
+        const {error}=await requestEmailCode(email);
+        if(error)throw error;
+        setEmailCode("");
+        setSentMessage("Enter the six-digit code from your email. It expires shortly, and you can request another code if needed.");
+        setStep("code-sent");
+        return;
+      }
       if(authMethod==="link"){
         const {error}=await requestEmailLink(email,false);
         if(error)throw error;
@@ -123,6 +132,29 @@ export default function AccountPage({ mode }: Props) {
       else if(/already registered|user already exists/i.test(message))setError("An account with this email already exists. Switch to sign in instead.");
       else setError(message);
     }finally{setBusy(false);}
+  }
+  async function verifyCode(e:FormEvent){
+    e.preventDefault();setBusy(true);setError("");
+    try{
+      const token=emailCode.replace(/\\s/g,"");
+      if(!/^\\d{6}$/.test(token))throw new Error("Enter the six-digit code from your email.");
+      const {error}=await verifyEmailCode(email,token);
+      if(error)throw error;
+      window.location.assign("/profile");
+    }catch(x){
+      const message=x instanceof Error?x.message:"We couldn't verify that code. Please try again.";
+      setError(/token|otp|expired|invalid/i.test(message)?"That code is invalid or has expired. Request a fresh code and try again.":message);
+    }finally{setBusy(false);}
+  }
+  async function resendCode(){
+    setBusy(true);setError("");
+    try{
+      const {error}=await requestEmailCode(email);
+      if(error)throw error;
+      setEmailCode("");
+      setSentMessage("A fresh six-digit code has been sent. Use the newest message.");
+    }catch(x){setError(x instanceof Error?x.message:"We couldn't send another code.");}
+    finally{setBusy(false);}
   }
   async function sendPasswordReset(){
     setError("");
@@ -225,10 +257,20 @@ export default function AccountPage({ mode }: Props) {
         </div>:<>
           <div className="auth-heading">
             <p className="eyebrow">A MORE PERSONAL EXPERIENCE</p>
-            <h2>{step==="reset-sent"?"Check your email":step==="sent"?"You're nearly there":authTab==="signup"?"Create your account":"Welcome back"}</h2>
+            <h2>{step==="reset-sent"?"Check your email":step==="code-sent"?"Enter your sign-in code":step==="sent"?"You're nearly there":authTab==="signup"?"Create your account":"Welcome back"}</h2>
             <p>{step!=="form"?sentMessage:authTab==="signup"?"A few details and you'll have your own space at Thrilokha Shilpa.":"Sign in to keep your bag and saved pieces together."}</p>
           </div>
-          {step==="form"?<>
+          {step==="code-sent"?<div className="auth-sent-state">
+            <div className="auth-success-mark"><Mail/></div>
+            <p className="auth-sent-address">{email}</p>
+            <form className="auth-form code-verify-form" onSubmit={verifyCode}>
+              <label htmlFor="email-login-code">Six-digit email code</label>
+              <input id="email-login-code" className="auth-code-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={emailCode} onChange={e=>setEmailCode(e.target.value.replace(/\\D/g,"").slice(0,6))} placeholder="000000"/>
+              <button className="checkout-button auth-submit" disabled={busy}>{busy?"Verifying…":"Verify and sign in"} <ArrowRight size={16}/></button>
+            </form>
+            <button type="button" className="auth-text-button auth-resend" onClick={()=>void resendCode()} disabled={busy}>Resend code</button>
+            <button type="button" className="back-link" onClick={()=>{setStep("form");setAuthMethod("code");setError("");setEmailCode("");}}> <ArrowLeft size={15}/> Change email or method</button>
+          </div>:step==="form"?<>
             <div className="auth-tabs" role="tablist" aria-label="Account access">
               <button type="button" role="tab" aria-selected={authTab==="signin"} className={authTab==="signin"?"active":""} onClick={()=>{setAuthTab("signin");setAuthMethod("password");setError("");}}>Sign in</button>
               <button type="button" role="tab" aria-selected={authTab==="signup"} className={authTab==="signup"?"active":""} onClick={()=>{setAuthTab("signup");setAuthMethod("password");setError("");}}>Create account</button>
@@ -252,8 +294,12 @@ export default function AccountPage({ mode }: Props) {
               <button className="checkout-button auth-submit" disabled={busy}>{busy?"Please wait…":authTab==="signup"?"Create account":authMethod==="link"?"Email me a sign-in link":"Sign in"} <ArrowRight size={16}/></button>
             </form>
             {authTab==="signin"&&<div className="auth-alternative">
-              <span>OR</span>
-              <button type="button" onClick={()=>{setAuthMethod(x=>x==="password"?"link":"password");setPassword("");setError("");}}><Mail size={16}/>{authMethod==="password"?"Use a secure email link instead":"Use password instead"}</button>
+              <span>OR SIGN IN WITH</span>
+              <div className="auth-methods">
+                <button type="button" className={authMethod==="password"?"selected":""} onClick={()=>{setAuthMethod("password");setPassword("");setError("");}}><KeyRound size={16}/>Password</button>
+                <button type="button" className={authMethod==="code"?"selected":""} onClick={()=>{setAuthMethod("code");setPassword("");setError("");}}><ShieldCheck size={16}/>Email code</button>
+                <button type="button" className={authMethod==="link"?"selected":""} onClick={()=>{setAuthMethod("link");setPassword("");setError("");}}><Mail size={16}/>Email link</button>
+              </div>
             </div>}
             <p className="auth-legal">By continuing, you agree to our <a href="/terms">Terms</a> and acknowledge our <a href="/privacy">Privacy Policy</a>.</p>
           </>:<div className="auth-sent-state">
