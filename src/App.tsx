@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, Check, Heart, Leaf,
+  ArrowLeft, ArrowRight, ArrowUpRight, Check, Heart, Leaf, UserRound,
   Menu, Minus, Plus, Search, ShieldCheck, ShoppingBag, X,
 } from "lucide-react";
 import { categories, formatPrice, products, type Category, type Product } from "./catalog";
+import AccountPage from "./Account";
 
 type CartLine = { productId: string; quantity: number };
 type SortOption = "featured" | "price-low" | "price-high" | "name";
@@ -181,7 +182,7 @@ function App() {
     setCart((current) => current.some((line) => line.productId === product.id)
       ? current.map((line) => line.productId === product.id ? { ...line, quantity: line.quantity + 1 } : line)
       : [...current, { productId: product.id, quantity: 1 }]);
-    setToast(`${product.name} added to your bag`);
+    setToast(`${product.name} added to Cart`);
   };
   const changeQuantity = (id: string, delta: number) => setCart((current) =>
     current.map((line) => line.productId === id ? { ...line, quantity: line.quantity + delta } : line).filter((line) => line.quantity > 0));
@@ -216,6 +217,7 @@ function App() {
       <div className="header-actions">
         <button className="icon-button search-trigger" aria-label="Search products" onClick={() => setSearchOpen((open) => !open)}><Search /></button>
         <button className="icon-button wishlist-trigger" aria-label={`Wishlist, ${wishlist.length} saved`} onClick={() => navigate("/wishlist")}><Heart /></button>
+        <button className="icon-button account-trigger" aria-label="Your account" onClick={() => navigate("/profile")}><UserRound /></button>
         <button className="bag-trigger" onClick={() => navigate("/bag")} aria-label={`Shopping bag, ${cartCount} items`}><ShoppingBag size={19} /><span>Bag</span><b>{cartCount}</b></button>
       </div>
     </header>
@@ -234,6 +236,7 @@ function App() {
         <section className="collection-section section-pad"><div className="section-heading collection-heading"><div><p className="eyebrow">THE MOST LOVED</p><h2>Good things, <em>gathered.</em></h2><p className="collection-subtitle">A few beautiful places to begin.</p></div><button className="text-link" onClick={() => shop("All")}>Shop everything <ArrowUpRight size={16} /></button></div>{productGrid(products.slice(0, 4))}</section>
         <section className="maker-section"><div className="maker-image"><img src="https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=1200&q=90" alt="Artisan hands shaping a ceramic vessel" loading="lazy" /><span className="image-index">THE MAKER'S HAND</span></div><div className="maker-copy"><p className="eyebrow">THE PEOPLE BEHIND IT</p><h2>Made by hand.<br /><em>Made to last.</em></h2><p>Every piece carries the skill and story of the hands that made it.</p><button className="primary-link" onClick={() => navigate("/about")}>Our story <ArrowUpRight size={16} /></button><div className="maker-signoff">A little more human, by design. <span>✳</span></div></div></section>
       </>}
+      {(pathname === "/login" || pathname === "/profile" || pathname === "/admin") && <AccountPage mode={pathname.slice(1)} />}
       {isShop && <section className="collection-section section-pad route-section"><div className="breadcrumb"><button onClick={() => navigate("/")}>Home</button><span>/</span><span>Shop</span>{effectiveCategory !== "All" && <><span>/</span><span>{effectiveCategory}</span></>}</div><div className="section-heading collection-heading"><div><p className="eyebrow">THE COMPLETE COLLECTION</p><h1>{effectiveCategory === "All" ? <>Objects of <em>desire.</em></> : <>{effectiveCategory} <em>edit.</em></>}</h1><p className="collection-subtitle">Discover thoughtful pieces, selected for their craft, character and quiet beauty.</p></div></div>{collectionControls}{productGrid(visibleProducts)}</section>}
       {pathname === "/collections" && <section className="section-pad route-section"><div className="breadcrumb"><button onClick={() => navigate("/")}>Home</button><span>/</span><span>Collections</span></div><p className="eyebrow">CURATED BY FEELING</p><h1 className="route-title">A world of <em>beautiful things.</em></h1><div className="category-grid collection-route-grid">{categories.map((item, index) => <button className="category-card" key={item.name} onClick={() => shop(item.name)}><div className="category-image"><img src={item.image} alt="" /><span>0{index + 1}</span><ArrowUpRight size={20} /></div><div className="category-caption"><span><strong>{item.name}</strong><small>{item.note}</small></span><ArrowRight size={17} /></div></button>)}</div></section>}
       {pathname === "/wishlist" && <section className="collection-section section-pad route-section"><div className="breadcrumb"><button onClick={() => navigate("/")}>Home</button><span>/</span><span>Saved pieces</span></div><p className="eyebrow">YOUR PERSONAL EDIT</p><h1 className="route-title">Kept close to <em>heart.</em></h1>{productGrid(visibleProducts)}</section>}
@@ -245,7 +248,7 @@ function App() {
     </main>
     <footer className="site-footer"><div className="footer-top"><div><BrandMark /><p className="footer-manifesto">A considered world of Indian craft, design and everyday treasures.</p></div><div className="footer-links"><div><strong>DISCOVER</strong><button onClick={() => shop("All")}>Shop all</button><button onClick={() => navigate("/collections")}>Collections</button><button onClick={() => navigate("/journal")}>The journal</button></div><div><strong>THE DETAILS</strong><button onClick={() => navigate("/help")}>Shipping & returns</button><button onClick={() => navigate("/help")}>Contact</button><button onClick={() => navigate("/about")}>Our story</button></div><div><strong>YOUR SPACE</strong><button onClick={() => navigate("/wishlist")}>Saved pieces</button><button onClick={() => navigate("/bag")}>Shopping bag</button></div></div></div><div className="footer-bottom"><span>© 2026 THRILOKHA SHILPA</span><span>CRAFT · CULTURE · CONSIDERATION <i>✳</i></span><button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>BACK TO TOP ↑</button></div></footer>
     <nav className="mobile-dock" aria-label="Quick navigation"><button onClick={() => navigate("/")}><Leaf size={19} /><span>Home</span></button><button onClick={() => shop("All")}><Search size={19} /><span>Shop</span></button><button onClick={() => navigate("/wishlist")}><Heart size={19} /><span>Saved</span></button><button onClick={() => navigate("/bag")}><ShoppingBag size={19} /><span>Bag{cartCount ? ` · ${cartCount}` : ""}</span></button></nav>
-    {menuOpen && <div className="overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setMenuOpen(false); }}><aside className="drawer menu-drawer"><div className="drawer-head"><BrandMark /><button className="icon-button" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X /></button></div><nav className="drawer-nav"><button onClick={() => shop("All")}>Shop everything <ArrowUpRight size={18} /></button>{categories.map((item) => <button key={item.name} onClick={() => shop(item.name)}>{item.name}<ArrowUpRight size={18} /></button>)}<button onClick={() => navigate("/collections")}>Collections <ArrowUpRight size={18} /></button><button onClick={() => navigate("/journal")}>The Edit <ArrowUpRight size={18} /></button><button onClick={() => navigate("/about")}>Our Story <ArrowUpRight size={18} /></button></nav></aside></div>}
+    {menuOpen && <div className="overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setMenuOpen(false); }}><aside className="drawer menu-drawer"><div className="drawer-head"><BrandMark /><button className="icon-button" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X /></button></div><nav className="drawer-nav"><button onClick={() => shop("All")}>Shop everything <ArrowUpRight size={18} /></button>{categories.map((item) => <button key={item.name} onClick={() => shop(item.name)}>{item.name}<ArrowUpRight size={18} /></button>)}<button onClick={() => navigate("/collections")}>Collections <ArrowUpRight size={18} /></button><button onClick={() => navigate("/journal")}>The Edit <ArrowUpRight size={18} /></button><button onClick={() => navigate("/about")}>Our Story <ArrowUpRight size={18} /></button><button onClick={() => navigate("/profile")}>My account <UserRound size={18}/></button></nav></aside></div>}
     {toast && <div className="toast" role="status"><Check size={16} />{toast}<button onClick={() => setToast("")} aria-label="Dismiss notification"><X size={14} /></button></div>}
   </div>;
 }
