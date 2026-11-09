@@ -63,6 +63,9 @@ export default function AccountPage({ mode }: Props) {
   },[user?.role]);
   useEffect(()=>{
     let alive=true;
+    const authFragment=new URLSearchParams(window.location.hash.replace(/^#/,""));
+    const authQuery=new URLSearchParams(window.location.search);
+    if(authFragment.get("type")==="recovery"||authQuery.get("type")==="recovery")setRecovery(true);
     const refreshUser=async()=>{
       try{
         const d=await request<{user:User|null}>("/api/auth/me");
