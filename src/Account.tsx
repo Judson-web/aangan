@@ -136,7 +136,7 @@ export default function AccountPage({ mode }: Props) {
   async function verifyCode(e:FormEvent){
     e.preventDefault();setBusy(true);setError("");
     try{
-      const token=emailCode.replace(/\\s/g,"");
+      const token=emailCode.replace(/\s/g,"");
       if(!/^\\d{6}$/.test(token))throw new Error("Enter the six-digit code from your email.");
       const {error}=await verifyEmailCode(email,token);
       if(error)throw error;
@@ -265,7 +265,7 @@ export default function AccountPage({ mode }: Props) {
             <p className="auth-sent-address">{email}</p>
             <form className="auth-form code-verify-form" onSubmit={verifyCode}>
               <label htmlFor="email-login-code">Six-digit email code</label>
-              <input id="email-login-code" className="auth-code-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={emailCode} onChange={e=>setEmailCode(e.target.value.replace(/\\D/g,"").slice(0,6))} placeholder="000000"/>
+              <input id="email-login-code" className="auth-code-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={emailCode} onChange={e=>setEmailCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="000000"/>
               <button className="checkout-button auth-submit" disabled={busy}>{busy?"Verifying…":"Verify and sign in"} <ArrowRight size={16}/></button>
             </form>
             <button type="button" className="auth-text-button auth-resend" onClick={()=>void resendCode()} disabled={busy}>Resend code</button>
