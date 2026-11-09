@@ -42,7 +42,7 @@ export default function AccountPage({ mode }: Props) {
     ]);
     setStats(s);setProducts(p.products??[]);setCoupons(c.coupons??[]);
     if(user?.role==="super_admin"){const adminData=await request<{admins:AdminAccount[]}>("/api/admin/admins");setAdmins(adminData.admins??[]);}
-  },[]);
+  },[user?.role]);
   useEffect(()=>{request<{user:User|null}>("/api/auth/me").then(d=>{setUser(d.user);setDisplayName(d.user?.display_name??"");}).catch(()=>setUser(null));},[]);
   useEffect(()=>{
     if(mode!=="admin"||user?.role!=="admin")return;
