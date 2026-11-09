@@ -41,7 +41,7 @@ export default function AccountPage({ mode }: Props) {
     ]);
     setStats(s);setProducts(p.products??[]);setCoupons(c.coupons??[]);
   },[]);
-  useEffect(()=>{request<{user:User|null}>("/api/auth/me").then(d=>setUser(d.user)).catch(()=>setUser(null));},[]);
+  useEffect(()=>{request<{user:User|null}>("/api/auth/me").then(d=>{setUser(d.user);setDisplayName(d.user?.display_name??"");}).catch(()=>setUser(null));},[]);
   useEffect(()=>{
     if(mode!=="admin"||user?.role!=="admin")return;
     let alive=true;
