@@ -1,13 +1,13 @@
 # Thrilokha Shilpa
 
-Thrilokha Shilpa is an editorial Indian craft and lifestyle marketplace. It pairs a familiar, easy-to-shop commerce structure with an art-directed visual identity: warm earthy colours, tactile textures, expressive Bodoni-inspired typography and maker-led photography.
+Thrilokha Shilpa is a contemporary Indian lifestyle and design brand. It pairs a familiar, easy-to-shop commerce structure with an art-directed visual identity: warm earthy colours, devotional line art, ornamental details and expressive Bodoni-inspired typography.
 
 ## Storefront experience
 
 - **Multi-page routing:** Home, Shop, category collections, individual product pages, saved pieces, shopping bag, Journal, Our Story and Help.
 - **Commerce discovery:** category navigation, catalogue search, sorting, product detail pages and quick add-to-bag actions.
 - **Saved pieces and bag:** guest data stays in the browser; signed-in cart and wishlist data sync to Cloudflare D1 across devices, with quantity controls and subtotal summary.
-- **Editorial storytelling:** photographic collection stories, craft notes and maker-led brand pages.
+- **Editorial storytelling:** brand-led collection stories, visual inspiration and a dedicated journal.
 - **Responsive navigation:** desktop category ribbon, mobile navigation dock, menu drawer and search.
 - **Human verification:** Cloudflare Turnstile managed challenge enforced at the Worker document boundary. The Worker verifies Siteverify success and the expected hostname, then issues a signed, HttpOnly, Secure, SameSite cookie that remembers a successful verification for 30 days. Unverified document requests receive the challenge page before the storefront HTML is served.
 
@@ -65,7 +65,7 @@ Cloudflare Workers Builds watches the repository's `main` branch and runs `npm r
 ## Project structure
 
 - `src/App.tsx`: routed storefront, catalogue interactions and verification UI.
-- `src/catalog.ts`: illustrative categories and products.
+- `src/catalog.ts`: category taxonomy and price formatting; live products are loaded from Cloudflare D1.
 - `src/worker.ts`: server-enforced Turnstile gate, email-code authentication, HttpOnly sessions, role-checked admin APIs, Cloudflare D1 persistence and product media delivery.
 - `src/styles.css`: responsive visual system.
 - `wrangler.jsonc`: Worker entry point and static asset binding.
