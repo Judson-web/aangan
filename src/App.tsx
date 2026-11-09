@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown,
+  ArrowRight, ArrowUpRight, Check,
   Heart, Leaf, Menu, Minus, Plus, Search, ShoppingBag, Sparkles, X,
 } from "lucide-react";
 import { categories, formatPrice, products, type Category, type Product } from "./catalog";
@@ -58,7 +58,6 @@ function App() {
   const [toast, setToast] = useState("");
   const [newsletter, setNewsletter] = useState("");
   const [subscribed, setSubscribed] = useState(false);
-  const [mobileSearch, setMobileSearch] = useState(false);
 
   useEffect(() => { localStorage.setItem(CART_KEY, JSON.stringify(cart)); }, [cart]);
   useEffect(() => { localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist)); }, [wishlist]);
