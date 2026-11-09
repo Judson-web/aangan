@@ -55,7 +55,7 @@ export default function AccountPage({ mode }: Props) {
 
   async function requestCode(e:FormEvent){
     e.preventDefault();setBusy(true);setError("");
-    try{const {error}=await requestEmailLink(email);if(error)throw error;setStep("sent");}
+    try{const {error}=await requestEmailLink(email, displayName);if(error)throw error;setStep("sent");}
     catch(x){setError(x instanceof Error?x.message:"Could not send sign-in code.");}
     finally{setBusy(false);}
   }
