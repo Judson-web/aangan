@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "aangan",
+  "name": "thrilokha-shilpa",
   "main": "src/worker.ts",
   "compatibility_date": "2026-11-09",
   "workers_dev": true,
@@ -25,5 +25,9 @@
       "database_name": "thrilokha-commerce",
       "database_id": "f696ffeb-cee1-43ba-9160-0de3e8666163"
     }
-  ]
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://swvlujplpqfppnhdhxyf.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_mNuobCwjLhFaqdQ03faipw_WYmrt0Ni"
+  }
 }

@@ -2,7 +2,7 @@ name: Quality checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/supabase-auth-storefront-cleanup]
   pull_request:
     branches: [main]
 
