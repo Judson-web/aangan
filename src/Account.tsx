@@ -133,8 +133,8 @@ export default function AccountPage({ mode }: Props) {
     </div>:<div className="account-panel"><h2>Welcome to your account</h2><p>Sign in to keep your bag and saved pieces with you across devices.</p><a className="checkout-button" href="/login">Sign in or create account <ArrowRight size={16}/></a></div>)}
     {mode==="admin"&&(user?.role==="admin"?<>
       <div className="admin-stats">{[
-        ["Live products",stats?.products??"…",Package],["Customer accounts",stats?.customers??"…",Users],["Orders",stats?.paymentsEnabled?stats.orders:"Not live",ShoppingBagIcon],["Active coupons",stats?.activeCoupons??"…",TicketPercent]
-      ].map(([label,value,Icon])=><article key={String(label)}><small>{String(label)}</small><strong>{String(value)}</strong></article>)}</div>
+        ["Live products",stats?.products??"…"],["Customer accounts",stats?.customers??"…"],["Orders",stats?.paymentsEnabled?stats.orders:"Not live"],["Active coupons",stats?.activeCoupons??"…"]
+      ].map(([label,value])=><article key={String(label)}><small>{String(label)}</small><strong>{String(value)}</strong></article>)}</div>
       <div className="admin-live-note"><span className="live-dot"/> Statistics refresh every 30 seconds. Orders and revenue remain disabled until payment integration is enabled.</div>
       <div className="admin-forms">
         <form className="admin-form" onSubmit={saveProduct}>
