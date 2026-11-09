@@ -74,7 +74,7 @@ export async function requestEmailCode(email: string) {
 export async function verifyEmailCode(email: string, token: string) {
   return supabase.auth.verifyOtp({
     email: normalizedEmail(email),
-    token: token.replace(/\\s/g, ""),
+    token: token.replace(/\s/g, ""),
     type: "email",
   });
 }
