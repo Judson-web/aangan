@@ -42,3 +42,13 @@ AFTER INSERT ON order_items
 BEGIN
   UPDATE products SET stock=stock-NEW.quantity,updated_at=CURRENT_TIMESTAMP WHERE id=NEW.product_id;
 END;
+
+CREATE TRIGGER IF NOT EXISTS order_cancel_restore_stock
+AFTER UPDATE OF status ON orders
+WHEN OLD.status!='cancelled' AND NEW.status='cancelled'
+BEGIN
+  UPDATE products
+  SET stock=stock+(SELECT quantity FROM order_items WHERE order_id=NEW.id AND product_id=products.id),
+      updated_at=CURRENT_TIMESTAMP
+  WHERE id IN (SELECT product_id FROM order_items WHERE order_id=NEW.id);
+END;
