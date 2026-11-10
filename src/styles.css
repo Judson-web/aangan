@@ -1125,3 +1125,154 @@ body{background:var(--paper);color:var(--ink)}
 }
 @media(hover:none){.quick-add{transform:none}}
 @media(prefers-reduced-motion:reduce){.product-card,.image-button img,.hero-cta{transition:none!important}}
+
+
+/* THRILOKHA SHILPA · premium retail art direction */
+:root {
+  --ink: #241e19;
+  --muted: #796f65;
+  --paper: #faf7f1;
+  --surface: #fffdf9;
+  --cream: #eee5d8;
+  --accent: #9f432e;
+  --accent-strong: #783322;
+  --line: #e5dbce;
+  --serif: "Instrument Serif", Georgia, serif;
+}
+::selection { background: #9f432e; color: #fffaf4; }
+button, a { touch-action: manipulation; }
+.site-shell { background: var(--paper); }
+.announcement { min-height: 30px; }
+.site-header { box-shadow: 0 8px 28px #34251a08; }
+.brand { transition: opacity .2s ease; }
+.brand:hover { opacity: .78; }
+.brand-monogram { flex: 0 0 auto; }
+.header-actions { gap: 10px; }
+.icon-button:active, .bag-trigger:active, .hero-cta:active { transform: scale(.97); }
+.editorial-hero {
+  min-height: clamp(590px, 49vw, 760px);
+  background:
+    radial-gradient(ellipse at 79% 43%, #e4d2bd 0, #e4d2bd00 39%),
+    linear-gradient(112deg, #f7f1e8 0%, #f7f1e8 47%, #eee2d3 47%, #eee2d3 100%);
+}
+.editorial-copy h1 { font-size: clamp(62px, 7vw, 108px); line-height: .9; }
+.editorial-copy .eyebrow { font-size: 9px; }
+.editorial-intro { max-width: 390px; font-size: 13px; line-height: 2; }
+.editorial-art {
+  box-shadow: 0 28px 70px #4a352218;
+  background: linear-gradient(145deg, #eee2d3, #e4d4c1);
+}
+.editorial-art:before { inset: 5%; border-color: #b59b7e; }
+.editorial-art img { transition: transform .8s cubic-bezier(.2,.7,.2,1); }
+.editorial-art:hover img { transform: scale(1.035) rotate(-1deg); }
+.hero-cta { box-shadow: 0 9px 22px #29211b1c; }
+.home-service-line { background: #fbf8f3; }
+.category-rail { padding-top: clamp(60px, 7vw, 100px); }
+.category-pills button { border-radius: 2px; }
+.category-pills button:focus-visible, .shop-filters button:focus-visible { outline-offset: 3px; }
+.catalogue-section { padding-top: clamp(48px, 5vw, 76px); }
+.section-heading { margin-bottom: 32px; }
+.section-heading h2 { letter-spacing: -.025em; }
+.product-grid { gap: 44px 22px; }
+.product-card { position: relative; min-width: 0; }
+.product-image-wrap {
+  border-radius: 2px;
+  background: #eee8df;
+  box-shadow: 0 2px 8px #38291b08;
+}
+.image-button img { transition: transform .75s cubic-bezier(.2,.7,.2,1), filter .4s ease; }
+.product-card:hover .image-button img { transform: scale(1.055); filter: saturate(1.04); }
+.product-index {
+  border: 1px solid #fff8;
+  background: #faf7f0ed;
+  backdrop-filter: blur(12px);
+  color: #625244;
+}
+.wish-button {
+  border: 1px solid #ffffffb8;
+  background: #fffdf2ed;
+  backdrop-filter: blur(12px);
+  transition: color .2s ease, background .2s ease, transform .2s ease;
+}
+.wish-button:hover { transform: scale(1.06); }
+.quick-add {
+  height: 47px;
+  background: #241e19f2;
+  color: #fffaf4;
+  letter-spacing: .13em;
+  transition: transform .3s cubic-bezier(.2,.7,.2,1), background .2s ease;
+}
+.quick-add:hover { background: var(--accent); }
+.product-meta { color: #8c7e70; font-size: 8px; }
+.product-name { transition: color .2s ease; }
+.product-name:hover { color: var(--accent); }
+.price-line strong { font-variant-numeric: tabular-nums; }
+.collection-section { background: #f4efe8; }
+.shop-toolbar { border-color: #ded3c6; }
+.shop-filters button { border-radius: 2px; }
+.shop-filters button.selected { background: #eee4d8; border-color: #cbb8a4; color: var(--accent); }
+.bag-summary { border-radius: 2px; }
+.bag-line > img { background: #eee8df; }
+.product-detail-image {
+  overflow: hidden;
+  background: #eee8df;
+  box-shadow: 0 22px 55px #38291b0c;
+}
+.product-detail-image img { transition: transform .8s ease; }
+.product-detail-image:hover img { transform: scale(1.025); }
+.product-detail-copy h1 { letter-spacing: -.025em; }
+.product-detail-facts { border-color: var(--line); }
+.product-save-button { transition: border-color .2s ease, color .2s ease, background .2s ease; }
+.product-save-button:hover { background: #f3e9df; }
+.site-footer { background: #28231f; }
+.site-footer .brand-word i { color: #d69a79; }
+.footer-links button { transition: color .2s ease; }
+.footer-links button:hover { color: #e2ad8e; }
+.footer-bottom { border-color: #ffffff26; }
+.drawer { box-shadow: -18px 0 60px #17120d18; }
+.drawer-nav button { transition: color .2s ease, padding-left .2s ease; }
+.drawer-nav button:hover { padding-left: 6px; }
+.search-bar { border: 1px solid var(--line); box-shadow: 0 18px 50px #3022161a; }
+.search-bar input { min-width: 0; }
+.toast { border-radius: 2px; box-shadow: 0 12px 35px #1c17122e; }
+.empty-results { border-radius: 2px; }
+.checkout-button { box-shadow: 0 8px 20px #241e1918; }
+.checkout-button:hover { box-shadow: 0 12px 26px #241e1924; }
+@media (min-width: 721px) {
+  .site-header { padding-inline: clamp(28px, 6vw, 104px); }
+  .editorial-hero { padding-inline: clamp(48px, 9vw, 150px); }
+  .editorial-art { min-height: 460px; }
+  .product-grid.horizontal-product-row { gap: 42px 22px; }
+  .product-card:hover { transform: translateY(-5px); }
+  .product-name { font-size: clamp(18px, 1.5vw, 22px); }
+}
+@media (max-width: 1000px) and (min-width: 721px) {
+  .editorial-hero { min-height: 570px; padding-inline: 6%; }
+  .editorial-copy h1 { font-size: clamp(58px, 7vw, 78px); }
+  .editorial-art { min-height: 360px; }
+}
+@media (max-width: 720px) {
+  .announcement { letter-spacing: .1em; }
+  .site-header { box-shadow: 0 5px 18px #34251a0a; }
+  .editorial-hero {
+    padding: 15px 14px 29px;
+    background: linear-gradient(180deg, #eee2d3 0%, #eee2d3 47%, #f7f1e8 47%, #f7f1e8 100%);
+  }
+  .editorial-art { box-shadow: 0 12px 28px #4a352214; }
+  .editorial-copy { padding: 25px 5px 0; }
+  .editorial-copy h1 { font-size: clamp(48px, 12.2vw, 66px); }
+  .editorial-intro { font-size: 11px; line-height: 1.85; }
+  .hero-cta { box-shadow: 0 7px 17px #29211b16; }
+  .product-grid, .product-grid.horizontal-product-row { gap: 27px 12px; }
+  .product-image-wrap { border-radius: 2px; }
+  .quick-add { height: 37px; font-size: 7px; }
+  .product-name { font-size: 16px; line-height: 1.15; }
+  .product-meta { font-size: 6px; }
+  .collection-section { background: #f4efe8; }
+  .product-detail-image { box-shadow: 0 12px 30px #38291b0c; }
+  .site-footer { padding-bottom: env(safe-area-inset-bottom); }
+  .mobile-dock { background: #fbf8f2f2; border-color: #e5dbce; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .editorial-art img, .image-button img, .product-detail-image img { transition: none !important; }
+}
