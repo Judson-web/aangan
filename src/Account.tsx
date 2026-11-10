@@ -250,13 +250,6 @@ export default function AccountPage({ mode }: Props) {
     <p className="eyebrow">THRILOKHA SHILPA · {mode==="admin"?"PRIVATE STORE STUDIO":"YOUR ACCOUNT"}</p>
     <h1 className="route-title">{mode==="admin"?<>Store <em>studio.</em></>:<>A little space <em>of your own.</em></>}</h1>
     {mode==="login"&&<div className="auth-layout">
-      <aside className="auth-editorial">
-        <div className="auth-art-frame"><img src="/thrilokha-artwork.svg" alt="Thrilokha Shilpa ornamental artwork"/></div>
-        <p className="eyebrow">THRILOKHA SHILPA · YOUR SPACE</p>
-        <h2>Good things begin with <em>the little details.</em></h2>
-        <p>Keep your favourite pieces close, follow your selections and make the store feel a little more like yours.</p>
-        <div className="auth-editorial-note"><span/> A considered space for everyday living</div>
-      </aside>
       <div className="account-panel auth-card">
         {authLoading?<div className="auth-loading">Checking your account…</div>:user?<div className="auth-logged-in">
           <div className="auth-success-mark"><Check/></div>
