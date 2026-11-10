@@ -155,7 +155,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       const id=decodeURIComponent(url.pathname.slice("/api/admin/sections/".length)); await env.DB.prepare("DELETE FROM store_sections WHERE id=?").bind(id).run(); return json({ok:true});
     }
     if(url.pathname==="/api/admin/products" && method==="GET"){
-      const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,image_urls,stock,active,created_at,updated_at FROM products ORDER BY created_at DESC").all();
+      const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,image_urls,material,origin,stock,active,created_at,updated_at FROM products ORDER BY created_at DESC").all();
       return json({products:result.results});
     }
     if(url.pathname==="/api/admin/coupons" && method==="GET"){
