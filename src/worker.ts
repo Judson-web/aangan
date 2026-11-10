@@ -108,7 +108,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
     return json({sections:result.results.map((x)=>({...x,product_ids:JSON.parse(String(x.product_ids||"[]"))}))});
   }
   if (url.pathname === "/api/products" && method === "GET") {
-    const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,image_urls,stock FROM products WHERE active=1 ORDER BY created_at DESC").all();
+    const result=await env.DB.prepare("SELECT id,slug,name,description,category,price,compare_at_price,image_url,image_urls,material,origin,stock FROM products WHERE active=1 ORDER BY created_at DESC").all();
     return json({products:result.results});
   }
   if (url.pathname.startsWith("/api/admin/")) {
@@ -191,7 +191,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       const slug=String(d.slug??name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")).slice(0,120);
       const imageUrls=Array.isArray(d.imageUrls)?d.imageUrls.filter((x:unknown)=>typeof x==="string"&&/^\/media\/[0-9a-f-]{36}$/i.test(x)).slice(0,5):[];
       const mainImage=imageUrls[0]??(typeof d.imageUrl==="string"&&/^\/media\/[0-9a-f-]{36}$/i.test(d.imageUrl)?d.imageUrl:"");
-      await env.DB.prepare("INSERT INTO products(id,slug,name,description,category,price,compare_at_price,image_url,image_urls,stock) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(id,slug,name,String(d.description??""),String(d.category??"General"),price,d.compareAtPrice!==null&&d.compareAtPrice!==undefined&&d.compareAtPrice!==""&&Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,mainImage,JSON.stringify(imageUrls.length?imageUrls:(mainImage?[mainImage]:[])),Math.max(0,Math.min(100000,Number(d.stock??0)))).run();
+      await env.DB.prepare("INSERT INTO products(id,slug,name,description,category,price,compare_at_price,image_url,image_urls,material,origin,stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)").bind(id,slug,name,String(d.description??""),String(d.category??"General"),price,d.compareAtPrice!==null&&d.compareAtPrice!==undefined&&d.compareAtPrice!==""&&Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,mainImage,JSON.stringify(imageUrls.length?imageUrls:(mainImage?[mainImage]:[])),String(d.material??"").trim().slice(0,120),String(d.origin??"").trim().slice(0,120),Math.max(0,Math.min(100000,Number(d.stock??0)))).run();
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"created","product",id).run();
       return json({id},201);
     }
@@ -203,7 +203,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       if(!String(d.name??"").trim() || !Number.isSafeInteger(price) || price<0) return json({error:"Product name and a valid price are required."},400);
       const imageUrls=Array.isArray(d.imageUrls)?d.imageUrls.filter((x:unknown)=>typeof x==="string"&&/^\/media\/[0-9a-f-]{36}$/i.test(x)).slice(0,5):[];
       const mainImage=imageUrls[0]??(typeof d.imageUrl==="string"&&/^\/media\/[0-9a-f-]{36}$/i.test(d.imageUrl)?d.imageUrl:"");
-      await env.DB.prepare("UPDATE products SET name=?,description=?,category=?,price=?,compare_at_price=?,image_url=?,image_urls=?,stock=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(String(d.name),String(d.description??""),String(d.category??"General"),price,d.compareAtPrice!==null&&d.compareAtPrice!==undefined&&d.compareAtPrice!==""&&Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,mainImage,JSON.stringify(imageUrls.length?imageUrls:(mainImage?[mainImage]:[])),Math.max(0,Math.min(100000,Number(d.stock??0))),d.active===false?0:1,id).run();
+      await env.DB.prepare("UPDATE products SET name=?,description=?,category=?,price=?,compare_at_price=?,image_url=?,image_urls=?,material=?,origin=?,stock=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(String(d.name),String(d.description??""),String(d.category??"General"),price,d.compareAtPrice!==null&&d.compareAtPrice!==undefined&&d.compareAtPrice!==""&&Number.isSafeInteger(Number(d.compareAtPrice))?Number(d.compareAtPrice):null,mainImage,JSON.stringify(imageUrls.length?imageUrls:(mainImage?[mainImage]:[])),String(d.material??"").trim().slice(0,120),String(d.origin??"").trim().slice(0,120),Math.max(0,Math.min(100000,Number(d.stock??0))),d.active===false?0:1,id).run();
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"updated","product",id).run();
       return json({ok:true});
     }
