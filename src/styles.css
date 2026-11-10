@@ -1419,3 +1419,41 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .continue-shopping{margin-top:10px;width:100%;min-height:40px;color:#17212b}
 @media(max-width:800px){.shop-toolbar{display:grid;grid-template-columns:1fr auto;align-items:center}.shop-toolbar .shop-filters{grid-column:1/-1}.sort-control{justify-self:start}.price-filter-row{gap:9px}.price-filter-row label{flex:1;min-width:115px}.price-filter-row input{width:100%}}
 @media(max-width:560px){.sort-control{font-size:11px}.sort-control select{min-height:34px}.price-filter-row{display:grid;grid-template-columns:1fr 1fr;align-items:end}.price-filter-row button{grid-column:1/-1}.stock-label{font-size:9px}.product-discount{font-size:9px}}
+
+
+/* Refined navigation and consistent native-control reset */
+:root{--ink:#17212b;--muted:#69737b;--line:#e7e9eb;--accent:#a6533f;--surface:#fff;--surface-soft:#f5f6f7}
+*,*::before,*::after{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+button{appearance:none;-webkit-appearance:none;border:0;background:none;cursor:pointer}
+button:disabled{cursor:not-allowed}
+input,select,textarea{appearance:none;-webkit-appearance:none;border-radius:0}
+select{background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 13px) 50%,calc(100% - 8px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:27px!important}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #a6533f;outline-offset:3px;box-shadow:0 0 0 5px #a6533f20}
+::selection{background:#e9c7bd;color:#17212b}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:#f1f2f3}::-webkit-scrollbar-thumb{background:#c4c9cc;border:2px solid #f1f2f3;border-radius:20px}::-webkit-scrollbar-thumb:hover{background:#929ba1}
+.marketplace-drawer{width:min(440px,92vw);max-width:440px;height:100%;padding:0 26px 22px;background:#fff;color:var(--ink);box-shadow:24px 0 70px #10182030;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;animation:drawer-enter .28s cubic-bezier(.2,.8,.2,1)}
+.drawer-overlay{background:#10182080;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);justify-content:flex-start}
+.marketplace-drawer .drawer-top{height:78px;min-height:78px;margin:0 -26px;padding:0 26px;background:#17212b;color:#fff;display:flex;align-items:center;justify-content:space-between}
+.marketplace-drawer .drawer-top .brand-word{font-size:18px;letter-spacing:-.45px}
+.marketplace-drawer .drawer-close{width:42px;height:42px;display:grid;place-items:center;border:1px solid #ffffff50;border-radius:50%;color:#fff;transition:background .18s,transform .18s}
+.marketplace-drawer .drawer-close:hover{background:#ffffff18;transform:rotate(90deg)}
+.marketplace-drawer .drawer-nav{display:flex;flex-direction:column;gap:3px;padding:28px 0 20px;overflow:visible}
+.marketplace-drawer .drawer-label{margin:0 0 10px;color:#9a5848;font-size:10px;font-weight:800;letter-spacing:.16em}
+.marketplace-drawer .drawer-nav>button,.marketplace-drawer .drawer-category-group>button{width:100%;min-height:52px;padding:0 5px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);border-radius:0;text-align:left;font-size:16px;font-weight:550;letter-spacing:-.2px;transition:color .16s,padding .16s,background .16s}
+.marketplace-drawer .drawer-nav>button:hover,.marketplace-drawer .drawer-category-group>button:hover{padding-left:12px;background:#f8f7f6;color:var(--accent)}
+.marketplace-drawer .drawer-nav>button.active{color:var(--accent)}
+.marketplace-drawer .drawer-category-group{display:flex;flex-direction:column;margin-top:17px;padding:13px 14px 8px;background:#f6f6f5;border-radius:12px}
+.marketplace-drawer .drawer-sublabel{margin:0 0 4px;color:#7b858b;font-size:9px;font-weight:800;letter-spacing:.14em}
+.marketplace-drawer .drawer-category-group>button{min-height:43px;font-size:14px;border-bottom-color:#e7e8e7}
+.marketplace-drawer .drawer-category-group>button:last-child{border-bottom:0}
+.marketplace-drawer .drawer-space-label{margin-top:27px}
+.marketplace-drawer .drawer-count{margin-left:auto;min-width:23px;height:23px;padding:0 6px;display:grid;place-items:center;border-radius:30px;background:#f1e7e3;color:#8c4b3b;font-size:11px;font-weight:700}
+.marketplace-drawer .drawer-bottom{margin-top:auto;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:18px}
+.marketplace-drawer .drawer-bottom button{padding:7px 0;color:#707980;font-size:11px;letter-spacing:.07em;text-transform:uppercase}
+.marketplace-drawer .drawer-bottom button:hover{color:var(--accent)}
+@keyframes drawer-enter{from{transform:translateX(-22px);opacity:.7}to{transform:translateX(0);opacity:1}}
+@media(max-width:560px){.marketplace-drawer{width:min(410px,92vw);padding-inline:20px}.marketplace-drawer .drawer-top{margin-inline:-20px;padding-inline:20px;height:70px;min-height:70px}.marketplace-drawer .drawer-nav{padding-top:22px}.marketplace-drawer .drawer-nav>button{min-height:49px;font-size:15px}}
+@media(prefers-reduced-motion:reduce){.marketplace-drawer{animation:none}.marketplace-drawer .drawer-close,.marketplace-drawer .drawer-nav>button,.marketplace-drawer .drawer-category-group>button{transition:none}}
