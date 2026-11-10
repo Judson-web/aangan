@@ -1,7 +1,7 @@
 export type Category = "All" | "Home" | "Wear" | "Jewellery" | "Art";
 export interface Product {
   id: string; name: string; maker: string; category: Exclude<Category, "All">;
-  price: number; oldPrice?: number; image: string; badge?: string;
+  price: number; oldPrice?: number; stock?: number; image: string; badge?: string;
   description: string; material: string; origin: string;
 }
 export const categories: Array<{ name: Exclude<Category, "All">; note: string; image: string }> = [
