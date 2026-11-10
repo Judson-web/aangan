@@ -87,6 +87,40 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
   const user = await currentUser(request,env);
   const body = async () => await request.json() as Record<string, unknown>;
   if (url.pathname === "/api/auth/me" && method === "GET") return json({user});
+  if(url.pathname==="/api/orders" && method==="GET"){
+    if(!user)return json({error:"Sign in to view your orders."},401);
+    const rows=await env.DB.prepare("SELECT id,status,subtotal,total,created_at FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 50").bind(user.id).all<{id:string;status:string;subtotal:number;total:number;created_at:string}>();
+    const orders=await Promise.all(rows.results.map(async order=>{const items=await env.DB.prepare("SELECT name,quantity,unit_price FROM order_items WHERE order_id=?").bind(order.id).all();return {...order,items:items.results}}));
+    return json({orders});
+  }
+  if(url.pathname==="/api/orders" && method==="POST"){
+    if(!user)return json({error:"Sign in before placing an order request."},401);
+    const d=await body();
+    const name=typeof d.name==="string"?d.name.trim().slice(0,80):"";
+    const phone=typeof d.phone==="string"?d.phone.trim().slice(0,20):"";
+    const address1=typeof d.address1==="string"?d.address1.trim().slice(0,160):"";
+    const address2=typeof d.address2==="string"?d.address2.trim().slice(0,160):"";
+    const city=typeof d.city==="string"?d.city.trim().slice(0,80):"";
+    const state=typeof d.state==="string"?d.state.trim().slice(0,80):"";
+    const postalCode=typeof d.postalCode==="string"?d.postalCode.trim().slice(0,12):"";
+    const country=typeof d.country==="string"?d.country.trim().slice(0,56):"";
+    if(!name||!phone||!address1||!city||!state||!postalCode||!country)return json({error:"Complete all required delivery details."},400);
+    if(!/^[0-9A-Za-z -]{4,12}$/.test(postalCode))return json({error:"Enter a valid postal code."},400);
+    const lines=Array.isArray(d.items)?d.items.slice(0,50):[];
+    if(!lines.length)return json({error:"Your bag is empty."},400);
+    const quantities=new Map<string,number>();
+    for(const line of lines){if(!line||typeof line.productId!=="string"||!Number.isInteger(line.quantity)||line.quantity<1||line.quantity>99)return json({error:"Your bag contains an invalid item."},400);quantities.set(line.productId,(quantities.get(line.productId)??0)+line.quantity);}
+    if(quantities.size!==lines.length)return json({error:"Remove duplicate bag lines and try again."},400);
+    const products=[];
+    for(const [id,quantity] of quantities){const product=await env.DB.prepare("SELECT id,name,price,image_url,stock,active FROM products WHERE id=?").bind(id).first<{id:string;name:string;price:number;image_url:string;stock:number;active:number}>();if(!product||product.active!==1)return json({error:"One of the items is no longer available. Refresh your bag."},409);if(product.stock<quantity)return json({error:product.name+" has only "+product.stock+" available."},409);products.push({...product,quantity});}
+    const subtotal=products.reduce((sum,p)=>sum+p.price*p.quantity,0);
+    if(!Number.isSafeInteger(subtotal)||subtotal<0)return json({error:"The order total is invalid."},400);
+    const id=crypto.randomUUID();
+    const statements=[env.DB.prepare("INSERT INTO orders(id,user_id,status,customer_name,email,phone,address_line1,address_line2,city,state,postal_code,country,subtotal,total) VALUES(?,?,'received',?,?,?,?,?,?,?,?,?,?,?)").bind(id,user.id,name,user.email,phone,address1,address2,city,state,postalCode,country,subtotal,subtotal)];
+    for(const p of products)statements.push(env.DB.prepare("INSERT INTO order_items(id,order_id,product_id,name,unit_price,quantity,image_url) VALUES(?,?,?,?,?,?,?)").bind(crypto.randomUUID(),id,p.id,p.name,p.price,p.quantity,p.image_url));
+    try{await env.DB.batch(statements);}catch(error){const message=String(error);if(message.includes("INSUFFICIENT_STOCK"))return json({error:"Stock changed while placing your order. Refresh your bag and try again."},409);if(message.includes("PRODUCT_UNAVAILABLE"))return json({error:"An item is no longer available."},409);throw error;}
+    return json({order:{id,status:"received",subtotal,total:subtotal,created_at:new Date().toISOString(),items:products.map(p=>({name:p.name,quantity:p.quantity,unit_price:p.price}))}},201);
+  }
   if(url.pathname==="/api/profile/avatar" && method==="POST"){
     if(!user) return json({error:"Sign in to update your profile photo."},401);
     let form:FormData; try{form=await request.formData();}catch{return json({error:"Upload a valid image."},400);}
@@ -175,6 +209,21 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
       await env.DB.prepare("INSERT INTO product_media(id,mime_type,data,byte_size) VALUES(?,?,?,?)").bind(id,file.type,new Uint8Array(await file.arrayBuffer()),file.size).run();
       await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"uploaded","media",id).run();
       return json({id,url:"/media/"+id},201);
+    }
+    if(url.pathname==="/api/admin/orders" && method==="GET"){
+      const rows=await env.DB.prepare("SELECT id,user_id,status,customer_name,email,phone,address_line1,address_line2,city,state,postal_code,country,subtotal,total,created_at FROM orders ORDER BY created_at DESC LIMIT 200").all();
+      const orders=await Promise.all(rows.results.map(async order=>{const items=await env.DB.prepare("SELECT name,quantity,unit_price FROM order_items WHERE order_id=?").bind(order.id).all();return {...order,items:items.results}}));
+      return json({orders});
+    }
+    if(url.pathname.startsWith("/api/admin/orders/") && method==="PUT"){
+      const id=decodeURIComponent(url.pathname.slice("/api/admin/orders/".length));const d=await body();const status=String(d.status??"");
+      if(!["confirmed","processing","shipped","delivered","cancelled"].includes(status))return json({error:"Choose a valid order status."},400);
+      const existing=await env.DB.prepare("SELECT id,status FROM orders WHERE id=?").bind(id).first<{id:string;status:string}>();
+      if(!existing)return json({error:"Order not found."},404);
+      if(existing.status==="cancelled"||existing.status==="delivered")return json({error:"This order can no longer be changed."},409);
+      await env.DB.prepare("UPDATE orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(status,id).run();
+      await env.DB.prepare("INSERT INTO admin_events(id,admin_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(),user.id,"updated","order",id).run();
+      return json({ok:true});
     }
     if(url.pathname==="/api/admin/stats" && method==="GET"){
       const [productsCount,customers,coupons,activity]=await Promise.all([
