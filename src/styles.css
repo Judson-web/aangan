@@ -1783,3 +1783,6 @@ body{background:#f7f7f7;color:#171719}
  .search-suggestions{left:-2px;right:-2px}
  .catalogue-filter-panel{grid-template-columns:1fr 1fr}
 }
+
+/* Keep account screens functional and free of decorative brand artwork */
+.auth-layout{grid-template-columns:minmax(0,620px);justify-content:center}
