@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowRight, ArrowUpRight, Heart, Menu, Search, ShoppingBag, UserRound, X, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Heart, Menu, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import { formatPrice, type Product } from "./catalog";
 import AccountPage from "./Account";
 import { apiFetch, supabase } from "./supabase";
