@@ -1612,7 +1612,7 @@ body{background:#f7f7f7;color:#171719}
 .marketplace-search input{flex:1;min-width:0;height:100%;min-height:0!important;padding:0!important;border:0!important;outline:0!important;background:transparent!important;color:#fff!important;font-size:14px}
 .marketplace-search input::placeholder{color:#a1a1a8}
 .marketplace-search>button{width:35px;height:35px;display:grid;place-items:center;border-radius:7px;background:var(--accent);color:#fff}
-.marketplace-nav{position:sticky;top:162px;z-index:50;height:43px;padding:0 clamp(14px,4vw,48px);display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;background:#202025;border:0;border-bottom:1px solid #34343a}
+.marketplace-nav{position:sticky;top:130px;z-index:50;height:43px;padding:0 clamp(14px,4vw,48px);display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;background:#202025;border:0;border-bottom:1px solid #34343a}
 .marketplace-nav::-webkit-scrollbar{display:none}
 .marketplace-nav button{flex:0 0 auto;min-height:30px;padding:0 13px;border:1px solid transparent;border-radius:7px;color:#d0d0d4;background:transparent;font-size:12px;font-weight:550;white-space:nowrap}
 .marketplace-nav button.is-active{background:#c82032;color:#fff}
@@ -1690,7 +1690,7 @@ body{background:#f7f7f7;color:#171719}
  .marketplace-header{grid-template-columns:34px minmax(0,1fr) auto;grid-template-rows:38px 44px;gap:8px 10px;padding:9px 12px}
  .marketplace-header .brand-word{font-size:clamp(15px,4.7vw,21px)}
  .marketplace-header .bag-trigger span{display:none}
- .marketplace-nav{top:148px;height:40px;padding-inline:10px;gap:5px}
+ .marketplace-nav{top:101px;height:40px;padding-inline:10px;gap:5px}
  .marketplace-nav button{font-size:11px;padding-inline:11px}
  .marketplace-home{padding:18px 12px 90px}
  .marketplace-section-title{margin-bottom:12px}
