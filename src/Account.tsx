@@ -4,13 +4,13 @@ import { apiFetch, supabase, signInWithPassword, signUpWithPassword, requestEmai
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Eye, EyeOff, KeyRound, LogOut, Mail, Pencil, ShieldCheck, TicketPercent, UserRound } from "lucide-react";
 
 type User = { id: string; email: string; display_name: string; avatar_url?: string; role: "customer" | "admin" | "super_admin" };
-type Product = { id:string; name:string; description:string; category:string; price:number; compare_at_price:number|null; image_url:string; stock:number; active:number };
+type Product = { id:string; name:string; description:string; category:string; price:number; compare_at_price:number|null; image_url:string; image_urls?:string; stock:number; active:number };
 type AdminAccount = {email:string;role:"admin"|"super_admin";created_at:string;added_by_email:string|null};
 type Coupon = { id:string; code:string; discount_type:"percent"|"fixed"; discount_value:number; min_order_value:number; max_uses:number|null; used_count:number; expires_at:string|null; active:number };
 type Stats = { products:number; customers:number; orders:number; revenue:number; paymentsEnabled:boolean; activeCoupons:number; recentActivity:Array<{action:string;entity_type:string;created_at:string}> };
 type StoreSection = {id:string;title:string;subtitle:string;kind:"featured"|"category"|"manual";category:string;product_ids:string[];position:number;visible:number};
 type Props = { mode: string };
-const blankProduct = () => ({name:"",description:"",category:"Home",price:"",compareAtPrice:"",imageUrl:"",stock:"0",active:true});
+const blankProduct = () => ({name:"",description:"",category:"Home",price:"",compareAtPrice:"",imageUrl:"",imageUrls:[] as string[],stock:"0",active:true});
 const blankCoupon = () => ({code:"",discountType:"percent",discountValue:"10",minimumOrder:"0",maxUses:"",expiresAt:""});
 
 async function request<T>(url:string, init?:RequestInit):Promise<T>{
@@ -200,19 +200,28 @@ export default function AccountPage({ mode }: Props) {
     try{const form=new FormData();form.append("file",file);const result=await request<{avatar_url:string}>("/api/profile/avatar",{method:"POST",body:form});setUser(u=>u?{...u,avatar_url:result.avatar_url}:u);setNotice("Profile photo updated.");}
     catch(x){setNotice(x instanceof Error?x.message:"Profile photo upload failed.");}finally{setUploading(false);}
   }
-  async function uploadImage(file?:File){
-    if(!file)return;
-    setUploading(true);setNotice("");
+  async function uploadImages(files:FileList|null){
+    if(!files?.length)return;
+    const remaining=Math.max(0,5-product.imageUrls.length);
+    const selected=Array.from(files).slice(0,remaining);
+    if(!selected.length){setNotice("A product can have up to 5 images.");return;}
+    if(files.length>remaining)setNotice("Only the first "+remaining+" image(s) will be added. The limit is 5 per product.");
+    setUploading(true);
     try{
-      const form=new FormData();form.append("file",file);
-      const result=await request<{url:string}>("/api/admin/media",{method:"POST",body:form});
-      setProduct(p=>({...p,imageUrl:result.url}));setNotice("Image uploaded securely to Cloudflare storage.");
-    }catch(x){setNotice(x instanceof Error?x.message:"Image upload failed.");}
+      const uploaded:string[]=[];
+      for(const file of selected){
+        const form=new FormData();form.append("file",file);
+        const result=await request<{url:string}>("/api/admin/media",{method:"POST",body:form});uploaded.push(result.url);
+      }
+      setProduct(p=>{const imageUrls=[...p.imageUrls,...uploaded].slice(0,5);return {...p,imageUrls,imageUrl:imageUrls[0]??p.imageUrl}});
+      setNotice(uploaded.length+" product image"+(uploaded.length===1?"":"s")+" uploaded securely.");
+    }catch(x){setNotice(x instanceof Error?x.message:"Image upload failed. Previously uploaded images remain available.");}
     finally{setUploading(false);}
   }
+  function removeProductImage(url:string){setProduct(p=>{const imageUrls=p.imageUrls.filter(x=>x!==url);return {...p,imageUrls,imageUrl:imageUrls[0]??""}})}
   async function saveProduct(e:FormEvent){
     e.preventDefault();setNotice("");
-    const payload={...product,price:Number(product.price),compareAtPrice:product.compareAtPrice?Number(product.compareAtPrice):null,stock:Number(product.stock)};
+    const payload={...product,imageUrl:product.imageUrls[0]??product.imageUrl,imageUrls:product.imageUrls.slice(0,5),price:Number(product.price),compareAtPrice:product.compareAtPrice?Number(product.compareAtPrice):null,stock:Number(product.stock)};
     try{
       await request(editingId?"/api/admin/products/"+encodeURIComponent(editingId):"/api/admin/products",{method:editingId?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       setNotice(editingId?"Product changes saved.":"Product published to the storefront.");
@@ -233,7 +242,7 @@ export default function AccountPage({ mode }: Props) {
   async function saveSection(e:FormEvent){e.preventDefault();setNotice("");try{await request("/api/admin/sections",{method:editingSection?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...section,id:editingSection,position:Number(section.position)})});setSection({title:"",subtitle:"",kind:"featured",category:"",product_ids:[],position:String(sections.length),visible:true});setEditingSection(null);setNotice("Homepage section saved.");await loadAdmin();}catch(x){setNotice(x instanceof Error?x.message:"Could not save section.");}}
   function editSection(item:StoreSection){setEditingSection(item.id);setSection({title:item.title,subtitle:item.subtitle,kind:item.kind,category:item.category,product_ids:item.product_ids??[],position:String(item.position),visible:Boolean(item.visible)});}
   function editProduct(item:Product){
-    setEditingId(item.id);setProduct({name:item.name,description:item.description,category:item.category,price:String(item.price),compareAtPrice:item.compare_at_price===null?"":String(item.compare_at_price),imageUrl:item.image_url,stock:String(item.stock),active:Boolean(item.active)});
+    let imageUrls:string[]=[];try{const parsed=JSON.parse(item.image_urls??"[]");if(Array.isArray(parsed))imageUrls=parsed.filter((x):x is string=>typeof x==="string"&&x.startsWith("/media/")).slice(0,5)}catch{/* Legacy product rows use image_url only. */}if(!imageUrls.length&&item.image_url.startsWith("/media/"))imageUrls=[item.image_url];setEditingId(item.id);setProduct({name:item.name,description:item.description,category:item.category,price:String(item.price),compareAtPrice:item.compare_at_price===null?"":String(item.compare_at_price),imageUrl:item.image_url,imageUrls,stock:String(item.stock),active:Boolean(item.active)});
     document.querySelector(".admin-form")?.scrollIntoView({behavior:"smooth",block:"start"});
   }
 
@@ -350,9 +359,9 @@ export default function AccountPage({ mode }: Props) {
           <label>Description<textarea value={product.description} onChange={e=>setProduct({...product,description:e.target.value})}/></label>
           <div className="form-two"><label>Category<CustomSelect label="Product category" value={product.category} options={["Home","Wear","Jewellery","Art"].map(value=>({value,label:value==="Home"?"Home & living":value}))} onChange={value=>setProduct({...product,category:value})} className="admin-select"/></label><label>Price (₹)<input type="number" min="0" required value={product.price} onChange={e=>setProduct({...product,price:e.target.value})}/></label></div>
           <div className="form-two"><label>Offer / compare-at price<input type="number" min="0" value={product.compareAtPrice} onChange={e=>setProduct({...product,compareAtPrice:e.target.value})}/></label><label>Stock<input type="number" min="0" value={product.stock} onChange={e=>setProduct({...product,stock:e.target.value})}/></label></div>
-          <label>Product image<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>void uploadImage(e.target.files?.[0])}/></label>
-          {uploading&&<p className="upload-state">Uploading image…</p>}
-          {product.imageUrl&&<div className="upload-preview"><img src={product.imageUrl} alt="Product preview"/><span>Image uploaded</span></div>}
+          <label>Product images (up to 5)<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple disabled={uploading||product.imageUrls.length>=5} onChange={e=>{void uploadImages(e.target.files);e.currentTarget.value="";}}/><small>{product.imageUrls.length}/5 images · JPG, PNG, WebP or AVIF · up to 1 MB each</small></label>
+          {uploading&&<p className="upload-state" role="status">Uploading product images…</p>}
+          {product.imageUrls.length>0&&<div className="admin-product-image-gallery">{product.imageUrls.map((url,index)=><div key={url}><img src={url} alt={"Product preview "+(index+1)}/><button type="button" onClick={()=>removeProductImage(url)} aria-label={"Remove image "+(index+1)}>×</button><small>{index===0?"Main image":"Image "+(index+1)}</small></div>)}</div>}
           <label className="admin-checkbox"><input type="checkbox" checked={product.active} onChange={e=>setProduct({...product,active:e.target.checked})}/> Visible in storefront</label>
           <button className="checkout-button" disabled={uploading}>{editingId?"Save changes":"Publish product"} <ArrowUpRight size={16}/></button>
           {editingId&&<button type="button" className="back-link" onClick={()=>{setEditingId(null);setProduct(blankProduct());}}>Cancel editing</button>}
