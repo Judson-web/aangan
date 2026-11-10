@@ -1731,3 +1731,55 @@ body{background:#f7f7f7;color:#171719}
  .product-detail-actions{grid-template-columns:1fr 1fr}
 }
 @media(prefers-reduced-motion:reduce){.product-card,.product-image-wrap .image-button img,.quick-add{transition:none!important}}
+
+/* Search, filtering and mobile catalogue ergonomics */
+.marketplace-search{position:relative}
+.marketplace-search .search-clear{width:28px;height:28px;background:transparent;color:#c7c7cc}
+.search-suggestions{position:absolute;z-index:90;top:calc(100% + 8px);left:0;right:0;overflow:hidden;border:1px solid #3c3c42;border-radius:10px;background:#1b1b20;box-shadow:0 18px 40px #0005}
+.search-suggestions>button{width:100%;min-height:62px;padding:8px 12px;display:flex;align-items:center;gap:11px;text-align:left;color:#f5f5f6;border-bottom:1px solid #34343a}
+.search-suggestions>button:last-child{border-bottom:0}
+.search-suggestions>button:hover,.search-suggestions>button:focus-visible{background:#29292f;outline:none}
+.search-suggestions img,.suggestion-placeholder{width:44px;height:44px;flex:0 0 44px;object-fit:contain;border-radius:6px;background:#303036}
+.search-suggestions>button>span:nth-child(2){display:grid;gap:4px;min-width:0;flex:1}
+.search-suggestions strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.search-suggestions small{color:#aaaab2;font-size:11px}
+.search-suggestions b{font-size:12px;color:#ff6473;white-space:nowrap}
+.search-no-results{padding:16px;color:#bdbdc4;font-size:12px}
+.filter-toggle{min-height:36px;padding:0 12px;display:flex;align-items:center;gap:7px;border:1px solid #dedee2;border-radius:7px;background:#fff;color:#222228;font-size:12px;font-weight:650}
+.filter-toggle:before{content:"";width:13px;height:13px;border:1.5px solid currentColor;border-top:0;border-bottom:0;transform:rotate(90deg);opacity:.8}
+.filter-toggle.has-filters{border-color:var(--accent);color:var(--accent)}
+.catalogue-filter-panel{display:flex;align-items:end;gap:12px;flex-wrap:wrap;padding:16px;margin:14px 0 18px;border:1px solid #e2e2e5;border-radius:10px;background:#fff}
+.filter-field{display:grid;gap:6px;min-width:130px}
+.filter-field>label{font-size:11px;color:#62626a;font-weight:650}
+.filter-field>input{height:38px;min-width:0;padding:0 10px;border:1px solid #dcdce1;border-radius:7px;background:#fff;color:#19191d}
+.filter-field .custom-select-trigger{min-height:38px;border-radius:7px}
+.availability-filter{display:flex;align-items:center;gap:8px;min-height:38px;font-size:12px;color:#303036}
+.availability-filter input{width:17px;height:17px;accent-color:var(--accent)}
+.clear-filters{min-height:38px;padding:0 10px;color:var(--accent);font-size:12px;font-weight:650}
+.clear-filters:disabled{opacity:.4;cursor:not-allowed}
+.result-count{font-variant-numeric:tabular-nums}
+.product-card .image-button img[hidden]{display:none}
+.product-card .image-button:has(img[hidden]){background:#ededee}
+.product-card .image-button:has(img[hidden]):after{content:"Image unavailable";display:grid;place-items:center;height:100%;color:#8b8b92;font-size:11px}
+.product-card .quick-add{touch-action:manipulation}
+.product-card .wish-button{touch-action:manipulation}
+.product-image-wrap img{content-visibility:auto}
+.product-detail-image img{max-width:100%;max-height:100%;object-fit:contain}
+.admin-product-image-gallery>div{position:relative}
+.admin-product-image-gallery>div>button.image-order{position:absolute;top:6px;left:6px;width:27px;height:27px;border-radius:5px;background:#18181c;color:#fff;font-size:13px}
+.admin-product-image-gallery>div>button.image-order:disabled{opacity:.3}
+.admin-product-image-gallery>div>button:not(.image-order){z-index:2}
+@media(max-width:800px){
+ .catalogue-filter-panel{position:fixed;z-index:100;left:10px;right:10px;bottom:calc(68px + env(safe-area-inset-bottom));max-height:min(65vh,520px);overflow:auto;display:grid;grid-template-columns:1fr 1fr;align-items:end;margin:0;padding:16px;border-radius:14px;box-shadow:0 20px 70px #0004}
+ .catalogue-filter-panel .filter-field:nth-child(3){grid-column:1/-1}
+ .availability-filter{grid-column:1/-1}
+ .clear-filters{grid-column:1/-1;justify-self:end}
+ .filter-toggle{min-height:34px}
+ .shop-toolbar{gap:8px}
+ .shop-toolbar .result-count{margin-right:auto}
+ .search-suggestions{max-height:60vh;overflow:auto}
+}
+@media(max-width:560px){
+ .search-suggestions{left:-2px;right:-2px}
+ .catalogue-filter-panel{grid-template-columns:1fr 1fr}
+}
