@@ -1940,3 +1940,19 @@ body{background:#f7f7f7;color:#171719}
 .order-card p{display:flex;justify-content:space-between;gap:14px;font-size:13px}
 .order-success{display:grid;justify-items:start;align-content:center;gap:14px}
 @media(max-width:760px){.checkout-layout{grid-template-columns:minmax(0,1fr)}.checkout-review{position:static;grid-row:1}.checkout-form-grid{grid-template-columns:minmax(0,1fr)}}
+
+.admin-orders-page{max-width:1180px;margin-inline:auto;min-height:60vh}
+.admin-orders-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:20px 0}
+.admin-order-list{display:grid;gap:14px}
+.admin-order-card{border:1px solid #e4e1dc;background:#fff;padding:clamp(16px,3vw,24px);min-width:0}
+.admin-order-card>header,.admin-order-card>footer{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.admin-order-card>header>div{display:grid;gap:5px}
+.admin-order-card small,.admin-order-customer span{font-size:12px;color:#777}
+.admin-order-card select{max-width:180px;min-width:0;padding:9px;border:1px solid #d8d4ce;background:#fff}
+.admin-order-customer{display:grid;gap:6px;padding:18px 0;border-bottom:1px solid #ece9e5}
+.admin-order-customer span{overflow-wrap:anywhere}
+.admin-order-items p{display:flex;justify-content:space-between;gap:12px;font-size:13px}
+.admin-order-card>footer{border-top:1px solid #222;padding-top:14px;margin-top:12px}
+.admin-order-card>footer span{font-size:11px;color:#777}
+.admin-notice{color:#376d4b;font-size:13px}
+@media(max-width:600px){.admin-order-card>header{align-items:flex-start;flex-direction:column}.admin-order-card select{width:100%;max-width:none}}

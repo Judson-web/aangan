@@ -232,7 +232,8 @@ async function api(request: Request, env: Env, url: URL): Promise<Response | nul
         env.DB.prepare("SELECT COUNT(*) AS count FROM coupons WHERE active=1").first(),
         env.DB.prepare("SELECT action,entity_type,created_at FROM admin_events ORDER BY created_at DESC LIMIT 8").all()
       ]);
-      return json({products:productsCount?.count??0,customers:customers?.count??0,orders:0,revenue:0,paymentsEnabled:false,activeCoupons:coupons?.count??0,recentActivity:activity.results});
+      const orderCount=await env.DB.prepare("SELECT COUNT(*) AS count FROM orders").first<{count:number}>();
+      return json({products:productsCount?.count??0,customers:customers?.count??0,orders:orderCount?.count??0,revenue:0,paymentsEnabled:false,activeCoupons:coupons?.count??0,recentActivity:activity.results});
     }
     if(url.pathname==="/api/admin/products" && method==="POST"){
       const d=await body(); const id=crypto.randomUUID(); const name=String(d.name??"").trim(); const price=Number(d.price);
