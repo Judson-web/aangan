@@ -1797,7 +1797,7 @@ body{background:#f7f7f7;color:#171719}
 .site-shell main{display:block;min-inline-size:0}
 .site-shell main>section,.site-shell main>article{min-inline-size:0}
 .route-section{inline-size:100%;min-inline-size:0}
-.product-grid,.product-grid.horizontal-product-row{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));align-items:start}
+.product-grid,.product-grid.horizontal-product-row{grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));align-items:start}
 .product-card{display:flex;min-inline-size:0;flex-direction:column;align-self:start}
 .product-image-wrap{display:flex;flex-direction:column;position:relative;inline-size:100%;block-size:auto;aspect-ratio:4/5;min-block-size:0;overflow:hidden}
 .product-image-wrap>.image-button{display:block;flex:1 1 auto;inline-size:100%;block-size:auto;min-block-size:0;overflow:hidden}
