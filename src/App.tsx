@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowRight, ArrowUpRight, ChevronDown, Heart, Menu, Search, ShoppingBag, UserRound, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ArrowRight, ArrowUpRight, Heart, Menu, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import { formatPrice, type Product } from "./catalog";
 import CustomSelect from "./CustomSelect";
 import AccountPage from "./Account";
