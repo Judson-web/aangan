@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import CustomSelect from "./CustomSelect";
 import { apiFetch, supabase, signInWithPassword, signUpWithPassword, requestEmailLink, requestEmailCode, verifyEmailCode, requestPasswordReset, updatePassword, signOut as supabaseSignOut } from "./supabase";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Eye, EyeOff, KeyRound, LogOut, Mail, Pencil, ShieldCheck, TicketPercent, UserRound } from "lucide-react";
 
